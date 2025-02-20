@@ -12,8 +12,8 @@ import com.qualcomm.robotcore.hardware.Servo;
 @Config
 public class subsystems {
 
-    public DcMotorEx KL, KR, AR, AL, Pivot, extend, encoderA, encoderP;
-    public Servo servoG, servoP, servoA;
+    public DcMotorEx KR, AR, AL, Arm, Pivot, extend, encoderA, encoderP;
+    public Servo servoG, servoP;
 
     public static double CLAW_OPEN = 1.0;
     public static double CLAW_CLOSE = 0;
@@ -110,11 +110,9 @@ public class subsystems {
             KR.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
             KR.setDirection(DcMotorSimple.Direction.FORWARD);
 
-            KL = hardwareMap.get(DcMotorEx.class, "KL");
-            KL.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-            KL.setDirection(DcMotorSimple.Direction.REVERSE);
 
-            extend = hardwareMap.get(DcMotorEx.class, "KL");
+
+            extend = hardwareMap.get(DcMotorEx.class, "KR");
 
         }
 
@@ -125,7 +123,6 @@ public class subsystems {
             @Override
             public boolean run(@NonNull TelemetryPacket packet) {
                 KR.setPower(PIDFKit.returnKitPIDF(setPosition, extend.getCurrentPosition()));
-                KL.setPower(PIDFKit.returnKitPIDF(setPosition, extend.getCurrentPosition()));
                 return true;
             }
         }
@@ -154,12 +151,12 @@ public class subsystems {
     }
 
     public class Antebraco {
-        public int targetPosition = 90; // Posição alvo inicial (90°)
+        public int setPosition;
 
         public Antebraco(HardwareMap hardwareMap) {
-            servoA = hardwareMap.get(Servo.class, "servoA");
-            servoA.setDirection(Servo.Direction.FORWARD);
-            encoderA = hardwareMap.get(DcMotorEx.class, "encoderA");
+            Arm = hardwareMap.get(DcMotorEx.class, "Arm");
+            Arm.setDirection(DcMotorEx.Direction.FORWARD);
+            encoderA = hardwareMap.get(DcMotorEx.class, "Arm");
 
         }
 
@@ -167,41 +164,36 @@ public class subsystems {
         public class updatePID implements Action {
             @Override
             public boolean run(@NonNull TelemetryPacket packet) {
-                int currentPosition = encoderA.getCurrentPosition();
-                double currentAngle = currentPosition * PIDFAntebraco.ticks_in_degrees; // Converte ticks para graus
-                double servoPosition = PIDFAntebraco.returnAntebracoPIDF(targetPosition, currentAngle);
-
-                servoA.setPosition(servoPosition);
+                Arm.setPower(PIDFKit.returnKitPIDF(setPosition, encoderA.getCurrentPosition()));
 
                 return true;
             }
         }
 
-        public Action UpdatePID_Antebraco() {
+        public Action UpdatePID_Kit() {
             return new updatePID();
         }
 
-        // Classe para definir um novo target
         public class setPosition implements Action {
-            int target;
+            int set;
 
             public setPosition(int position) {
-                target = position;
+                set = position;
             }
 
             @Override
             public boolean run(@NonNull TelemetryPacket packet) {
-                targetPosition = target;
+                setPosition = set;
                 return false;
             }
         }
 
-        public Action SetPosition(int pos) {
-            return new setPosition(pos);
-        }
 
-
+    public Action SetPosition(int pos) {
+        return new setPosition(pos);
     }
+}
+
 
 
     public class Pulso {

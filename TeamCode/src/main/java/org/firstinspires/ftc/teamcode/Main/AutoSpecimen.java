@@ -64,12 +64,25 @@ public final class AutoSpecimen extends LinearOpMode {
         while (!isStopRequested() && beginPose == null) {
             List<AprilTagDetection> detections = tagProcessor.getDetections();
             for (AprilTagDetection tag : detections) {
-                if (tag.id == 11) { // Verifica se a AprilTag detectada é a correta
-                    beginPose =(new Pose2d(15, -64, 0)); // Define a posição inicial
-                    visionPortal.close();
+                if (tag.id == 11) {  // Filtra a AprilTag desejada
+
+                    double distance = tag.ftcPose.range;  // Distância em polegadas
+                    double angle = Math.toRadians(tag.ftcPose.bearing); // Ângulo em radianos
+
+                    // Posição inicial baseada na câmera (ajuste se necessário)
+                    double cameraOffsetX = 6; // Offset da câmera em relação ao centro do robô
+                    double cameraOffsetY = 0;
+
+                    // Cálculo da posição do robô sem o heading
+                    double x = tag.ftcPose.x - distance * Math.cos(angle) - cameraOffsetX;
+                    double y = tag.ftcPose.y - distance * Math.sin(angle) - cameraOffsetY;
+
+                    beginPose = new Pose2d(x, y, 0); // Define a posição inicial sem heading
+                    visionPortal.close(); // Fecha a câmera para economizar processamento
                     break;
                 }
             }
+
             telemetry.addData("AprilTag Detectada?", beginPose != null);
             telemetry.update();
         }
