@@ -98,6 +98,7 @@ public final class AutoSpecimen extends LinearOpMode {
         }
 
         telemetry.addLine("AprilTag detectada! Iniciando trajetória...");
+        telemetry.addData("beginPose", beginPose);
         telemetry.update();
 
         // Inicializa o drive com a posição corrigida
