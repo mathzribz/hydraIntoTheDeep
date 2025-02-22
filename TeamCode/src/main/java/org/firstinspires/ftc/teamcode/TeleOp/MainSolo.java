@@ -10,6 +10,7 @@ import com.arcrobotics.ftclib.controller.PIDFController;
 import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
@@ -34,6 +35,7 @@ public class MainSolo extends LinearOpMode {
     boolean homingDone = false;
     public PIDFController controllerANG, controllerKIT, controllerArm, controllerServoP;
     final double ticks_in_degrees = 360.0 / 8192;
+    final double ticks_in_degrees_kit = 360.0 / 28;
     final double ticks_in_degrees_Arm = 360.0 / 288;
 
     double MAX_ANGLE = 180;
@@ -43,12 +45,12 @@ public class MainSolo extends LinearOpMode {
     // Variáveis PIDF para o braço
     public static double angP = 0.01, angI = 0, angD = 0.001, angF = 0.1;
     public static int targetANG;
-    public static double speedANG;
+    public static double speedANG = 0.5;
 
     // Variáveis PIDF para o Kit Liner
     public static double kitP = 0.01, kitI = 0, kitD = 0, kitF = 0.1;
     public static int targetKIT;
-    public static double speedKIT;
+    public static double speedKIT = 0.5;
 
     // Variáveis PIDF para o servo Antebraço
     public static double Arm_P = 0.01, Arm_I = 0, Arm_D = 0, Arm_F = 0.1;
@@ -83,23 +85,22 @@ public class MainSolo extends LinearOpMode {
                 sleep(300); // Pequeno delay para evitar múltiplos registros do toque
             }
 
-            if (gamepad1.share && !lastShare) { // Detecta apenas a transição do botão
+            if (gamepad1.dpad_down && !lastShare) { // Detecta apenas a transição do botão
                 isBlueAlliance = !isBlueAlliance; // Alterna entre azul e vermelho
             }
-            lastShare= gamepad1.share; // Atualiza o estado anterior do botão
+            lastShare= gamepad1.dpad_down ; // Atualiza o estado anterior do botão
 
             if (isManualControl) {
                 AngControl();
                 KitControl();
                 ServosControl();
-                applyArm_PIDF();
                 ArmControl();
                 applyServoP_PIDF();
                 Collect = false;
             } else {
                 applyAngPIDF();
                 applyKitPIDF();
-                applyArm_PIDF();
+
                 applyServoP_PIDF();
                 AutoFunctions();
                 ServosControl();
@@ -115,6 +116,7 @@ public class MainSolo extends LinearOpMode {
             telemetry.addData("servoG", servoG.getPosition());
             telemetry.addData("servoP", servoP.getPosition());
             telemetry.addData("target Arm", targetArm);
+            telemetry.addData(" Arm  ticks ", Arm.getCurrentPosition());
             telemetry.addData("Velocidade", speed);
             telemetry.update();
         }
@@ -138,7 +140,7 @@ public class MainSolo extends LinearOpMode {
         // Pulso
         servoP = hardwareMap.get(Servo .class, "servoP"); // porta 1 expension
         // Antebraço
-       
+
         // Through bore Encoders
         EncoderANG = hardwareMap.get(DcMotorEx.class, "AR"); // porta  de control (encoder)
         EncoderKIT = hardwareMap.get(DcMotorEx.class, "KR"); // porta  de control (encoder)
@@ -165,7 +167,7 @@ public class MainSolo extends LinearOpMode {
 
         KR.setDirection(DcMotor.Direction.FORWARD);
 
-        Arm.setDirection(DcMotor.Direction.FORWARD);
+        Arm.setDirection(DcMotor.Direction.REVERSE);
 
         // Encoders
         RMF.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
@@ -259,7 +261,7 @@ public class MainSolo extends LinearOpMode {
         double LT = gamepad1.left_trigger;
         double RT = gamepad1.right_trigger;
         double maxSpeed = 0.5;
-        double tickMax = 50000;
+        double tickMax = -2200;
         double currentTicksAng = EncoderANG.getCurrentPosition();
 
         // Inicializa a potência dos motores
@@ -276,8 +278,8 @@ public class MainSolo extends LinearOpMode {
 
 
             // Permite apenas descer caso esteja no limite
-            if (currentTicksAng <= tickMax && RT > 0) {
-                armPower = LT * maxSpeed; // Só permite descer
+            if (currentTicksAng <= tickMax && LT > 0) {
+                armPower = RT * maxSpeed; // Só permite descer
             }
 
             // Aplica a potência calculada nos motores
@@ -287,12 +289,12 @@ public class MainSolo extends LinearOpMode {
     }
 
     public void KitControl() {
-        double ticksMax = 30000; // Limite superior em ticks
-        double ticksMin = 400; // Limite inferior em ticks
+        double ticksMax = 3250; // Limite superior em ticks
+        double ticksMin = -1300; // Limite inferior em ticks
         double kitPower = 1;
 
         // Leitura da posição do encoder de KL
-        int currentTicksKL = EncoderKIT.getCurrentPosition();
+        int currentTicksKL = KR.getCurrentPosition();
 
         if (gamepad1.a) {
             if (currentTicksKL < ticksMax) {
@@ -320,7 +322,7 @@ public class MainSolo extends LinearOpMode {
     public void ServosControl() {
         // Garra
         if (gamepad1.left_bumper ) {
-            servoG.setPosition(0.47);
+            servoG.setPosition(1);
         } else if (gamepad1.right_bumper) {
             servoG.setPosition(0);
         }
@@ -329,8 +331,10 @@ public class MainSolo extends LinearOpMode {
 
         if (gamepad1.dpad_down) {
             targetServoP = 0;
+
         } else if (gamepad1.dpad_up) {
-           targetServoP = 10;
+           targetServoP = 8;
+
         }
 
         // Pulso Manual
@@ -343,10 +347,11 @@ public class MainSolo extends LinearOpMode {
     public void ArmControl() {
 
         if (gamepad1.dpad_left) {
-            targetArm = 0;
+            Arm.setPower(0.5);
         }
         else if (gamepad1.dpad_right) {
-            targetArm = 20;
+            Arm.setPower(-0.5);
+            //targetArm = 20;
         }
 
     }
@@ -459,11 +464,11 @@ public class MainSolo extends LinearOpMode {
             }
             // Aplicar PIDF apenas se o controle manual não estiver ativo
             controllerKIT.setPIDF(kitP, kitI, kitD, kitF);
-            int currentPosition = EncoderKIT.getCurrentPosition();
+            int currentPosition = KR.getCurrentPosition();
             double pid = controllerKIT.calculate(currentPosition, targetKIT);
 
-            double ff = Math.cos(Math.toRadians(targetKIT * ticks_in_degrees)) * kitF;
-            double output = (pid + ff) * RT;
+            double ff = Math.cos(Math.toRadians(targetKIT * ticks_in_degrees_kit)) * kitF;
+            double output = (pid + ff) ;
             output = Math.max(-1.0, Math.min(1.0, output));
 
             KR.setPower(output * speedKIT);
@@ -472,7 +477,7 @@ public class MainSolo extends LinearOpMode {
         }
     }
     private void applyArm_PIDF() {
-        if (!isManualControl) {
+
             controllerArm.setPIDF(Arm_P, Arm_I, Arm_D, Arm_F );
 
             int currentPosition = Arm.getCurrentPosition(); // Leitura do encoder externo
@@ -482,11 +487,11 @@ public class MainSolo extends LinearOpMode {
             output = Math.max(-1.0, Math.min(1.0, output));
 
 
-            Arm.setPower(output);
-        }
+            Arm.setPower(output * 0.5);
+
     }
     private void applyServoP_PIDF() {
-        if (!isManualControl) {
+
             controllerServoP.setPIDF(servoP_P, servoP_I, servoP_D, servoP_F );
 
             int currentPosition = EncoderServoP.getCurrentPosition(); // Leitura do encoder externo
@@ -506,4 +511,3 @@ public class MainSolo extends LinearOpMode {
         }
     }
 
-}

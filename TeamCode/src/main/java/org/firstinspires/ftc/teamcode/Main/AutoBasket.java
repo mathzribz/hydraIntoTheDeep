@@ -59,7 +59,7 @@ public final class AutoBasket extends LinearOpMode {
 
         telemetry.addLine("Aguardando detecção da AprilTag...");
         telemetry.update();
-
+/*
         // Espera até que uma AprilTag seja detectada
         while (!isStopRequested() && beginPose == null) {
             List<AprilTagDetection> detections = tagProcessor.getDetections();
@@ -83,6 +83,7 @@ public final class AutoBasket extends LinearOpMode {
             telemetry.update();
             return;
         }
+        */
 
         telemetry.addLine("AprilTag detectada! Iniciando trajetória...");
         telemetry.update();
@@ -90,6 +91,7 @@ public final class AutoBasket extends LinearOpMode {
         // Inicializa o drive com a posição corrigida
         MecanumDrive drive = new MecanumDrive(hardwareMap, beginPose);
         Pose2d finalPose = new Pose2d(7, -35, Math.toRadians(90));
+        Pose2d beginPose = new Pose2d(-21, -64, 0);
 
         waitForStart();
 
