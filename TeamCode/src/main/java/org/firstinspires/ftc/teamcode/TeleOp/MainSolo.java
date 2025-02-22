@@ -10,7 +10,6 @@ import com.arcrobotics.ftclib.controller.PIDFController;
 import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
-import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
@@ -38,7 +37,6 @@ public class MainSolo extends LinearOpMode {
     final double ticks_in_degrees_kit = 360.0 / 28;
     final double ticks_in_degrees_Arm = 360.0 / 288;
     double maxVelocity = 933; // Para 36:1
-
 
     double MAX_ANGLE = 180;
     final double ticks_in_degrees_Servos = MAX_ANGLE / 8192;
