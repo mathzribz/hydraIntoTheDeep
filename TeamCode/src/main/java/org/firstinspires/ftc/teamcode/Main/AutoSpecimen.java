@@ -63,7 +63,7 @@ public final class AutoSpecimen extends LinearOpMode {
         // Espera até que uma AprilTag seja detectada
         while (!isStopRequested() && beginPose == null) {
             List<AprilTagDetection> detections = tagProcessor.getDetections();
-        /*    for (AprilTagDetection tag : detections) {
+            for (AprilTagDetection tag : detections) {
                 if (tag.id == 11) {  // Filtra a AprilTag desejada
 
                     double distance = tag.ftcPose.range;  // Distância em polegadas
@@ -77,13 +77,11 @@ public final class AutoSpecimen extends LinearOpMode {
                     double x = tag.ftcPose.x - distance * Math.cos(angle) - cameraOffsetX;
                     double y = tag.ftcPose.y - distance * Math.sin(angle) - cameraOffsetY;
 
-                    beginPose = new Pose2d(x, y, 0); // Define a posição inicial sem heading
+                    beginPose = new Pose2d(15, -64, 0); // Define a posição inicial sem heading
                     visionPortal.close(); // Fecha a câmera para economizar processamento
                     break;
                 }
             }
-
-         */
 
             telemetry.addData("AprilTag Detectada?", beginPose != null);
             telemetry.update();
@@ -91,21 +89,20 @@ public final class AutoSpecimen extends LinearOpMode {
 
         // Desliga a câmera para economizar processamento
 
-/*
+
         // Se nenhuma AprilTag foi detectada, não faz nada
         if (beginPose == null) {
             telemetry.addLine("Nenhuma AprilTag detectada. Cancelando...");
             telemetry.update();
             return;
         }
-*/
+
         telemetry.addLine("AprilTag detectada! Iniciando trajetória...");
         telemetry.addData("beginPose", beginPose);
         telemetry.update();
 
         // Inicializa o drive com a posição corrigida
         MecanumDrive drive = new MecanumDrive(hardwareMap, beginPose);
-        Pose2d beginPose = new Pose2d(15, -64, 0);
         Pose2d finalPose = new Pose2d(6, -35, Math.toRadians(90));
 
         waitForStart();

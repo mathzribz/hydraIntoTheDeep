@@ -15,7 +15,7 @@ public class testesMotor extends LinearOpMode {
 
         waitForStart();
         while (opModeIsActive()) {
-            AR = hardwareMap.get(DcMotor.class, "AR"); // porta 0
+            AR = hardwareMap.get(DcMotor.class, "Arm"); // porta 0
             AL = hardwareMap.get(DcMotor.class, "AL"); // porta 1
 
 

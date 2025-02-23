@@ -33,10 +33,7 @@ public class MainSolo extends LinearOpMode {
     boolean Collect = false;
     boolean homingDone = false;
     public PIDFController controllerANG, controllerKIT, controllerArm, controllerServoP;
-    final double ticks_in_degrees = 360.0 / 8192;
-    final double ticks_in_degrees_kit = 360.0 / 28;
-    final double ticks_in_degrees_Arm = 360.0 / 288;
-    double maxVelocity = 933; // Para 36:1
+    final double ticks_in_degrees = 360.0 / 28;
 
     double MAX_ANGLE = 180;
     final double ticks_in_degrees_Servos = MAX_ANGLE / 8192;
@@ -54,7 +51,7 @@ public class MainSolo extends LinearOpMode {
 
     // Variáveis PIDF para o servo Antebraço
     public static double Arm_P = 0.01, Arm_I = 0, Arm_D = 0, Arm_F = 0.1;
-    public static int targetArm;
+    public static int targetArm ;
     public static double speedArm = 1;
 
     // Variáveis PIDF para o servo Pulso
@@ -77,7 +74,7 @@ public class MainSolo extends LinearOpMode {
 
         while (opModeIsActive()) {
 
-            initAng();
+
             loc();
 
             // Alternância entre os modos ao pressionar o touchpad
@@ -86,26 +83,25 @@ public class MainSolo extends LinearOpMode {
                 sleep(300); // Pequeno delay para evitar múltiplos registros do toque
             }
 
-            if (gamepad1.options && !lastShare) { // Detecta apenas a transição do botão
+            if (gamepad1.dpad_right && !lastShare) { // Detecta apenas a transição do botão
                 isBlueAlliance = !isBlueAlliance; // Alterna entre azul e vermelho
             }
-            lastShare= gamepad1.options ; // Atualiza o estado anterior do botão
+            lastShare= gamepad1.dpad_right ; // Atualiza o estado anterior do botão
 
             if (isManualControl) {
                 AngControl();
                 KitControl();
                 ServosControl();
                 ArmControl();
-                applyKitPIDF();
-                applyServoP_PIDF();
+                applyArm_PIDF();
+
                 Collect = false;
             } else {
+
                 applyAngPIDF();
                 applyKitPIDF();
-                applyArm_PIDF();
                 applyServoP_PIDF();
-                AutoFunctions();
-                ServosControl();
+
             }
 
 
@@ -175,12 +171,13 @@ public class MainSolo extends LinearOpMode {
 
         AR.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         AL.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        EncoderANG.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
         KR.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
 
     }
-
+/*
     public void initAng() {
         if (!homingDone) {
             // Mover o braço lentamente para baixo até o sensor ativar
@@ -198,6 +195,8 @@ public class MainSolo extends LinearOpMode {
 
         }
     }
+
+        */
 
     public void loc() {
         IMU imu = hardwareMap.get(IMU.class, "imu");
@@ -228,22 +227,18 @@ public class MainSolo extends LinearOpMode {
             botHeading += Math.PI;
         }
 
-        // Cálculo de rotação do movimento
-        double rotX = (strafe * Math.cos(-botHeading) - drive * Math.sin(-botHeading));
-        double rotY = (strafe * Math.sin(-botHeading) + drive * Math.cos(-botHeading));
 
-        double denominator = Math.max(Math.abs(rotY) + Math.abs(rotX) + Math.abs(turn), 1);
+        // Calcular as potências das rodas
+        double frontLeftPower = drive + strafe + turn;
+        double frontRightPower = drive - strafe - turn;
+        double backLeftPower = drive - strafe + turn;
+        double backRightPower = drive + strafe - turn;
 
-        double powerLMF = (rotY + rotX + turn) / denominator;
-        double powerLMB = (rotY - rotX + turn) / denominator;
-        double powerRMF = (rotY - rotX - turn) / denominator;
-        double powerRMB = (rotY + rotX - turn) / denominator;
-
-        // Aplicação das potências
-        RMF.setPower(powerRMF * speed);
-        RMB.setPower(powerRMB * speed);
-        LMF.setPower(powerLMF * speed);
-        LMB.setPower(powerLMB * speed);
+        // Aplicar potências
+        RMF.setPower(frontRightPower);
+        RMB.setPower(backRightPower);
+        LMF.setPower(frontLeftPower);
+        LMB.setPower(backLeftPower);
 
         telemetry.addData("Yaw", imu.getRobotYawPitchRollAngles());
         telemetry.addData("Alliance", isBlueAlliance ? "Blue" : "Red");
@@ -316,7 +311,7 @@ public class MainSolo extends LinearOpMode {
     public void ServosControl() {
         // Garra
         if (gamepad1.left_bumper ) {
-            servoG.setPosition(1);
+            servoG.setPosition(0.8);
         } else if (gamepad1.right_bumper) {
             servoG.setPosition(0);
         }
@@ -324,27 +319,29 @@ public class MainSolo extends LinearOpMode {
         // Pulso
 
         if (gamepad1.dpad_down) {
-            targetServoP = 0;
+            servoP.setPosition(0);
 
         } else if (gamepad1.dpad_up) {
-           targetServoP = 8;
+            servoP.setPosition(1);
 
         }
-
-        // Pulso Manual
-        else if (gamepad1.y && isManualControl) {
-            targetServoP = 5;
+        else if (gamepad1.dpad_left){
+            servoP.setPosition(0.7);
         }
+
 
     }
 
     public void ArmControl() {
 
-        if (gamepad1.dpad_left) {
-            targetArm = 10;
+        if (gamepad1.y) {
+            targetArm = -25;
         }
-        else if (gamepad1.dpad_right) {
-            targetArm = 20;
+        else if (gamepad1.x) {
+            targetArm = -5;
+        }
+        else {
+            Arm.setPower(0);
         }
 
     }
@@ -456,15 +453,20 @@ public class MainSolo extends LinearOpMode {
         if (!isManualControl) {
             // Aplicar PIDF apenas se o controle manual não estiver ativo
             controllerANG.setPIDF(angP, angI, angD, angF);
-            int currentPosition = EncoderANG.getCurrentPosition();
-            double targetVelocity = controllerANG.calculate(currentPosition, targetANG);
+            int currentPosition = AR.getCurrentPosition();
+            double pid = controllerANG.calculate(currentPosition, targetANG);
 
-            targetVelocity = Math.max(-maxVelocity, Math.min(maxVelocity, targetVelocity));
-           // double ff = Math.cos(Math.toRadians(targetKIT * ticks_in_degrees_kit)) * kitF;
+            // Calcular Feedforward
+            double ff = Math.cos(Math.toRadians(targetANG * ticks_in_degrees)) * angF;
 
+            // Calcular potência final
+            double output = pid + ff;
+            output = Math.max(-1.0, Math.min(1.0, output));
+            double speed = 0.7;
 
-            AR.setVelocity(targetVelocity * speedANG);
-            AL.setVelocity(targetVelocity * speedANG);
+            // Aplicar potência aos motores do braço
+            AR.setPower(output * speed);
+            AL.setPower(output * speed);
         }
     }
 
@@ -484,12 +486,18 @@ public class MainSolo extends LinearOpMode {
             controllerKIT.setPIDF(kitP, kitI, kitD, kitF);
             int currentPosition = KR.getCurrentPosition();
 
-            double targetVelocity = controllerKIT.calculate(currentPosition, targetKIT);
+            double pid = controllerKIT.calculate(currentPosition, targetKIT);
 
-            targetVelocity = Math.max(-maxVelocity, Math.min(maxVelocity, targetVelocity));
+            // Calcular Feedforward
+            double ff = Math.cos(Math.toRadians(targetKIT * ticks_in_degrees)) * kitF;
 
-            KR.setVelocity(targetVelocity * speedKIT);
+            // Calcular potência final
+            double output = pid + ff;
+            output = Math.max(-1.0, Math.min(1.0, output));
+            double speed = 0.7;
 
+            // Aplicar potência aos motores do braço
+            KR.setPower(output * speed);
 
         }
     }
@@ -504,7 +512,7 @@ public class MainSolo extends LinearOpMode {
             output = Math.max(-1.0, Math.min(1.0, output));
 
 
-            Arm.setPower(output );
+            Arm.setPower(output * 0.5);
 
     }
     private void applyServoP_PIDF() {
