@@ -70,7 +70,6 @@ public class testePIDFArmsDual extends OpMode {
 
         // Aplicar potência aos motores do braço
         AR.setPower(output * speed);
-        AL.setPower(output * speed);
 
         // Exibir informações no telemetry
         telemetry.addData("Posição Encoder (ticks):", posPivot);

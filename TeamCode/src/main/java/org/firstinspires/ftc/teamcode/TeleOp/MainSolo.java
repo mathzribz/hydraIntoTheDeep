@@ -26,7 +26,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 public class MainSolo extends LinearOpMode {
     private DcMotorEx RMF, RMB, LMF, LMB, KR, AR, AL, Arm;
     private Servo servoG, servoP;
-    private DcMotorEx EncoderANG, EncoderKIT, EncoderServoP;
+    private DcMotorEx EncoderServoP;
     private TouchSensor mag;
     double speed = 0.8;
     private boolean isManualControl = true;
@@ -34,7 +34,6 @@ public class MainSolo extends LinearOpMode {
     boolean homingDone = false;
     public PIDFController controllerANG, controllerKIT, controllerArm, controllerServoP;
     final double ticks_in_degrees = 360.0 / 28;
-
     double MAX_ANGLE = 180;
     final double ticks_in_degrees_Servos = MAX_ANGLE / 8192;
 
@@ -51,7 +50,7 @@ public class MainSolo extends LinearOpMode {
 
     // Variáveis PIDF para o servo Antebraço
     public static double Arm_P = 0.01, Arm_I = 0, Arm_D = 0, Arm_F = 0.1;
-    public static int targetArm ;
+    public static int targetArm;
     public static double speedArm = 1;
 
     // Variáveis PIDF para o servo Pulso
@@ -59,8 +58,6 @@ public class MainSolo extends LinearOpMode {
     public static int targetServoP;
 
     private ElapsedTime timer = new ElapsedTime();
-    boolean isBlueAlliance = true; // Troque para false se for Red Alliance
-    boolean lastShare = false;
 
     @Override
     public void runOpMode() {
@@ -83,11 +80,6 @@ public class MainSolo extends LinearOpMode {
                 sleep(300); // Pequeno delay para evitar múltiplos registros do toque
             }
 
-            if (gamepad1.dpad_right && !lastShare) { // Detecta apenas a transição do botão
-                isBlueAlliance = !isBlueAlliance; // Alterna entre azul e vermelho
-            }
-            lastShare= gamepad1.dpad_right ; // Atualiza o estado anterior do botão
-
             if (isManualControl) {
                 AngControl();
                 KitControl();
@@ -109,7 +101,7 @@ public class MainSolo extends LinearOpMode {
 
             telemetry.addData("Modo", isManualControl ? "Manual" : "Automático");
             telemetry.addData("Collect ", Collect);
-            telemetry.addData("Ang ticks", EncoderANG.getCurrentPosition());
+            telemetry.addData("Ang ticks", AR.getCurrentPosition());
             telemetry.addData("Kit ticks", KR.getCurrentPosition());
             telemetry.addData("servoG", servoG.getPosition());
             telemetry.addData("servoP", servoP.getPosition());
@@ -130,17 +122,13 @@ public class MainSolo extends LinearOpMode {
         AL = hardwareMap.get(DcMotorEx.class, "AL"); // porta 3 control
         // Motores do Kit
         KR = hardwareMap.get(DcMotorEx.class, "KR"); // porta 2 expension
-        // Ante braço
+        // Antebraço
         Arm = hardwareMap.get(DcMotorEx.class, "Arm"); // porta 3 expension
         // Garra
         servoG = hardwareMap.get(Servo.class, "servoG"); // porta 0 expension
         // Pulso
         servoP = hardwareMap.get(Servo .class, "servoP"); // porta 1 expension
-        // Antebraço
-
-        // Through bore Encoders
-        EncoderANG = hardwareMap.get(DcMotorEx.class, "AR"); // porta  de control (encoder)
-        EncoderKIT = hardwareMap.get(DcMotorEx.class, "KR"); // porta  de control (encoder)
+        // Through bore Encoder
         EncoderServoP = hardwareMap.get(DcMotorEx.class, "LMB"); // porta  de control (encoder)
         // Sensor Magnético
         mag = hardwareMap.get(TouchSensor.class, "mag");
@@ -171,7 +159,6 @@ public class MainSolo extends LinearOpMode {
 
         AR.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         AL.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        EncoderANG.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
         KR.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
@@ -199,40 +186,44 @@ public class MainSolo extends LinearOpMode {
         */
 
     public void loc() {
+
+        // Recupera o IMU do hardwareMap
         IMU imu = hardwareMap.get(IMU.class, "imu");
+
+        // Define os parâmetros de orientação do Hub no robô
         IMU.Parameters parameters = new IMU.Parameters(new RevHubOrientationOnRobot(
                 RevHubOrientationOnRobot.LogoFacingDirection.DOWN,
                 RevHubOrientationOnRobot.UsbFacingDirection.BACKWARD));
 
+        // Inicializa o IMU com os parâmetros definidos
         imu.initialize(parameters);
 
-        // Leitura dos controles do joystick
-        double drive = -gamepad1.left_stick_y;
-        double strafe = gamepad1.left_stick_x;
-        double turn = gamepad1.right_stick_x;
+        double y = -gamepad1.left_stick_y; // Remember, Y stick value is reversed
+        double x = gamepad1.left_stick_x;
+        double rx = gamepad1.right_stick_x;
 
-        // Zona morta
-        double deadzone = 0.05;
-        if (Math.abs(turn) < deadzone) turn = 0;
-        if (Math.abs(strafe) < deadzone) strafe = 0;
-        if (Math.abs(drive) < deadzone) drive = 0;
-
-        // Identifica a orientação do robô
-        double botHeading = imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.RADIANS);
-
-        // Define se está na aliança azul (true) ou vermelha (false)
-
-        // Se estiver na aliança oposta, ajusta a referência
-        if (!isBlueAlliance) {
-            botHeading += Math.PI;
+        // This button choice was made so that it is hard to hit on accident,
+        // it can be freely changed based on preference.
+        // The equivalent button is start on Xbox-style controllers.
+        if (gamepad1.options) {
+            imu.resetYaw();
         }
 
+        double botHeading = imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.RADIANS);
 
-        // Calcular as potências das rodas
-        double frontLeftPower = drive + strafe + turn;
-        double frontRightPower = drive - strafe - turn;
-        double backLeftPower = drive - strafe + turn;
-        double backRightPower = drive + strafe - turn;
+
+        double rotX = x * Math.cos(-botHeading) - y * Math.sin(-botHeading);
+        double rotY = x * Math.sin(-botHeading) + y * Math.cos(-botHeading);
+
+        // Compensação do strafe
+        rotX = rotX * 1.1;
+
+        double denominator = Math.max(Math.abs(rotY) + Math.abs(rotX) + Math.abs(rx), 1);
+
+        double frontLeftPower = (rotY + rotX + rx) / denominator;
+        double backLeftPower = (rotY - rotX + rx) / denominator;
+        double frontRightPower = (rotY - rotX - rx) / denominator;
+        double backRightPower = (rotY + rotX - rx) / denominator;
 
         // Aplicar potências
         RMF.setPower(frontRightPower);
@@ -241,8 +232,6 @@ public class MainSolo extends LinearOpMode {
         LMB.setPower(backLeftPower);
 
         telemetry.addData("Yaw", imu.getRobotYawPitchRollAngles());
-        telemetry.addData("Alliance", isBlueAlliance ? "Blue" : "Red");
-        telemetry.update();
 
 }
 
@@ -251,10 +240,10 @@ public class MainSolo extends LinearOpMode {
         double RT = gamepad1.right_trigger;
         double maxSpeed = 0.5;
         double tickMax = -2200;
-        double currentTicksAng = EncoderANG.getCurrentPosition();
+        double currentTicksAng = AR.getCurrentPosition();
 
         // Inicializa a potência dos motores
-        double armPower = 0;
+        double armPower ;
 
         if (isManualControl) {// Lógica de controle com fim de curso
             if (currentTicksAng <= tickMax && LT > 0) {
@@ -309,7 +298,9 @@ public class MainSolo extends LinearOpMode {
     }
 
     public void ServosControl() {
+
         // Garra
+
         if (gamepad1.left_bumper ) {
             servoG.setPosition(0.8);
         } else if (gamepad1.right_bumper) {
@@ -317,31 +308,25 @@ public class MainSolo extends LinearOpMode {
         }
 
         // Pulso
-
-        if (gamepad1.dpad_down) {
-            servoP.setPosition(0);
-
-        } else if (gamepad1.dpad_up) {
-            servoP.setPosition(1);
-
+        if (gamepad1.dpad_up) {
+           targetServoP = 1;
         }
-        else if (gamepad1.dpad_left){
-            servoP.setPosition(0.7);
+        else if (gamepad1.dpad_left) {
+            targetServoP = 5;
         }
-
+        else if (gamepad1.dpad_down){
+            targetServoP = 0;
+        }
 
     }
 
     public void ArmControl() {
 
-        if (gamepad1.y) {
+        if (gamepad1.x) {
             targetArm = -25;
         }
-        else if (gamepad1.x) {
+        else if (gamepad1.y) {
             targetArm = -5;
-        }
-        else {
-            Arm.setPower(0);
         }
 
     }
@@ -390,7 +375,7 @@ public class MainSolo extends LinearOpMode {
         }
         telemetry.addData("target Ang", targetANG);
         telemetry.addData("target Kit", targetKIT);
-        telemetry.update();
+
     }
 
     public void Collect_Submersible() {
@@ -451,9 +436,13 @@ public class MainSolo extends LinearOpMode {
 
     private void applyAngPIDF() {
         if (!isManualControl) {
-            // Aplicar PIDF apenas se o controle manual não estiver ativo
+
+            // Define valores
             controllerANG.setPIDF(angP, angI, angD, angF);
+
+            // Leitura de posição pelo encoder
             int currentPosition = AR.getCurrentPosition();
+
             double pid = controllerANG.calculate(currentPosition, targetANG);
 
             // Calcular Feedforward
@@ -462,11 +451,10 @@ public class MainSolo extends LinearOpMode {
             // Calcular potência final
             double output = pid + ff;
             output = Math.max(-1.0, Math.min(1.0, output));
-            double speed = 0.7;
 
             // Aplicar potência aos motores do braço
-            AR.setPower(output * speed);
-            AL.setPower(output * speed);
+            AR.setPower(output * speedANG);
+            AL.setPower(output * speedANG);
         }
     }
 
@@ -508,11 +496,14 @@ public class MainSolo extends LinearOpMode {
             int currentPosition = Arm.getCurrentPosition(); // Leitura do encoder externo
             double pid = controllerArm.calculate(currentPosition, targetArm);
 
-            double output = pid * speedArm;
-            output = Math.max(-1.0, Math.min(1.0, output));
+        double ff = Math.cos(Math.toRadians(targetArm * ticks_in_degrees)) * Arm_F;
+
+        // Calcular potência final
+        double output = pid + ff;
+        output = Math.max(-1.0, Math.min(1.0, output));
 
 
-            Arm.setPower(output * 0.5);
+            Arm.setPower(output);
 
     }
     private void applyServoP_PIDF() {
