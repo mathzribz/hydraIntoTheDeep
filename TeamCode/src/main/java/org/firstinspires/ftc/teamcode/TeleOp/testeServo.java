@@ -16,7 +16,6 @@ public class testeServo extends LinearOpMode {
         servoG = hardwareMap.get(Servo.class, "servoG");
         servoG.setDirection(Servo.Direction.FORWARD);
 
-        servoA = hardwareMap.get(Servo.class, "servoA");
         servoA.setDirection(Servo.Direction.REVERSE);
         servoP = hardwareMap.get(Servo.class, "servoP");
 

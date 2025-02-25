@@ -10,6 +10,7 @@ import com.arcrobotics.ftclib.controller.PIDFController;
 import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
@@ -39,19 +40,19 @@ public class MainSolo extends LinearOpMode {
 
 
     // Variáveis PIDF para o braço
-    public static double angP = 0.05, angI = 0, angD = 0, angF = 0.001;
-    public static int targetANG;
+    public static double angP = 0.01, angI = 0, angD = 0, angF = 0.1;
+    public static int targetANG   ;
     public static double speedANG = 1;
 
     // Variáveis PIDF para o Kit Liner
-    public static double kitP = 0.03, kitI = 0, kitD = 0, kitF = 0.001;
-    public static int targetKIT;
+    public static double kitP = 0.01, kitI = 0, kitD = 0, kitF = 0.1;
+    public static int targetKIT ;
     public static double speedKIT = 1;
 
     // Variáveis PIDF para o servo Antebraço
     public static double Arm_P = 0.01, Arm_I = 0, Arm_D = 0, Arm_F = 0.1;
-    public static int targetArm;
-    public static double speedArm = 1;
+    public static int targetArm = 0;
+    public static double speedArm = 0.5;
 
     // Variáveis PIDF para o servo Pulso
     public static double servoP_P = 0.01, servoP_I = 0, servoP_D = 0, servoP_F = 0.01;
@@ -70,8 +71,7 @@ public class MainSolo extends LinearOpMode {
         waitForStart();
 
         while (opModeIsActive()) {
-
-
+            initAng();
             loc();
 
             // Alternância entre os modos ao pressionar o touchpad
@@ -86,6 +86,7 @@ public class MainSolo extends LinearOpMode {
                 ServosControl();
                 ArmControl();
                 applyArm_PIDF();
+                applyServoP_PIDF();
 
                 Collect = false;
             } else {
@@ -93,6 +94,8 @@ public class MainSolo extends LinearOpMode {
                 applyAngPIDF();
                 applyKitPIDF();
                 applyServoP_PIDF();
+                AutoFunctions();
+                applyArm_PIDF();
 
             }
 
@@ -100,13 +103,15 @@ public class MainSolo extends LinearOpMode {
             // Atualizar telemetria
 
             telemetry.addData("Modo", isManualControl ? "Manual" : "Automático");
+            telemetry.addData("targetANG", targetANG);
+            telemetry.addData("power AR", AR.getPower());
+            telemetry.addData("power AL", AL.getPower());
             telemetry.addData("Collect ", Collect);
             telemetry.addData("Ang ticks", AR.getCurrentPosition());
             telemetry.addData("Kit ticks", KR.getCurrentPosition());
             telemetry.addData("servoG", servoG.getPosition());
             telemetry.addData("servoP", servoP.getPosition());
             telemetry.addData(" Arm  ticks ", Arm.getCurrentPosition());
-            telemetry.addData("Velocidade", speed);
             telemetry.update();
         }
     }
@@ -145,7 +150,7 @@ public class MainSolo extends LinearOpMode {
         LMB.setDirection(DcMotor.Direction.REVERSE);
 
         AR.setDirection(DcMotor.Direction.REVERSE);
-        AL.setDirection(DcMotor.Direction.REVERSE);
+        AL.setDirection(DcMotor.Direction.FORWARD);
 
         KR.setDirection(DcMotor.Direction.FORWARD);
 
@@ -157,19 +162,23 @@ public class MainSolo extends LinearOpMode {
         LMF.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         LMB.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
-        AR.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        AL.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
-        KR.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+// Define valores
+        controllerANG.setPIDF(angP, angI, angD, angF);
 
+        controllerKIT.setPIDF(kitP, kitI, kitD, kitF);
+
+        controllerArm.setPIDF(Arm_P, Arm_I, Arm_D, Arm_F );
+
+        controllerServoP.setPIDF(servoP_P, servoP_I, servoP_D, servoP_F );
 
     }
-/*
+
     public void initAng() {
         if (!homingDone) {
             // Mover o braço lentamente para baixo até o sensor ativar
             while (!mag.isPressed() && opModeIsActive()) {
-                AR.setPower(-0.2);
+                AR.setPower(0.2);
                 AL.setPower(-0.2);
             }
             AR.setPower(0);
@@ -178,12 +187,13 @@ public class MainSolo extends LinearOpMode {
             homingDone = true;
         }
         if (mag.isPressed() && homingDone) {
-            EncoderANG.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+            AR.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+            targetArm = -50;
 
         }
     }
 
-        */
+
 
     public void loc() {
 
@@ -205,7 +215,7 @@ public class MainSolo extends LinearOpMode {
         // This button choice was made so that it is hard to hit on accident,
         // it can be freely changed based on preference.
         // The equivalent button is start on Xbox-style controllers.
-        if (gamepad1.options) {
+        if (gamepad1.dpad_right) {
             imu.resetYaw();
         }
 
@@ -251,7 +261,7 @@ public class MainSolo extends LinearOpMode {
                 armPower = 0; // Não sobe
             } else {
                 // Calcula a potência do braço com base nos gatilhos
-                armPower = (LT - RT) * maxSpeed;
+                armPower = (RT - LT) * maxSpeed;
             }
 
 
@@ -262,7 +272,7 @@ public class MainSolo extends LinearOpMode {
 
             // Aplica a potência calculada nos motores
             AR.setPower(armPower);
-            AL.setPower(armPower);
+            AL.setPower(-armPower);
         }
     }
 
@@ -302,20 +312,23 @@ public class MainSolo extends LinearOpMode {
         // Garra
 
         if (gamepad1.left_bumper ) {
-            servoG.setPosition(0.8);
+            servoG.setPosition(0.6);
         } else if (gamepad1.right_bumper) {
             servoG.setPosition(0);
         }
 
         // Pulso
         if (gamepad1.dpad_up) {
-           targetServoP = 1;
+          // targetServoP = 1;
+            servoP.setPosition(1);
         }
         else if (gamepad1.dpad_left) {
-            targetServoP = 5;
+            // targetServoP = 5;
+            servoP.setPosition(0.5);
         }
         else if (gamepad1.dpad_down){
-            targetServoP = 0;
+           // targetServoP = 0;
+            servoP.setPosition(0);
         }
 
     }
@@ -379,8 +392,7 @@ public class MainSolo extends LinearOpMode {
     }
 
     public void Collect_Submersible() {
-        applyAngPIDF();
-        applyKitPIDF();
+
 
         targetANG = 0; speedANG = 0.5;
 
@@ -393,12 +405,11 @@ public class MainSolo extends LinearOpMode {
     }
 
     public void Collect_Specimen() {
-        applyAngPIDF();
-        applyKitPIDF();
 
-        targetANG = -0; speedANG = 0.55;
 
-        targetKIT = 0; speedKIT = 1.0;
+        targetANG = -20; speedANG = 0.5;
+
+        targetKIT = 20; speedKIT = 1.0;
 
         targetArm = 0; speedArm = 1.0;
 
@@ -407,8 +418,6 @@ public class MainSolo extends LinearOpMode {
     }
 
     public void Deposit_Chamber() {
-        applyAngPIDF();
-        applyKitPIDF();
 
         targetANG = -0; speedANG = 0.5;
 
@@ -421,8 +430,7 @@ public class MainSolo extends LinearOpMode {
     }
 
     public void Deposit_Basket() {
-        applyAngPIDF();
-        applyKitPIDF();
+
 
         targetANG = -0; speedANG = 0.6;
 
@@ -437,9 +445,6 @@ public class MainSolo extends LinearOpMode {
     private void applyAngPIDF() {
         if (!isManualControl) {
 
-            // Define valores
-            controllerANG.setPIDF(angP, angI, angD, angF);
-
             // Leitura de posição pelo encoder
             int currentPosition = AR.getCurrentPosition();
 
@@ -453,8 +458,9 @@ public class MainSolo extends LinearOpMode {
             output = Math.max(-1.0, Math.min(1.0, output));
 
             // Aplicar potência aos motores do braço
-            AR.setPower(output * speedANG);
-            AL.setPower(output * speedANG);
+            AR.setPower(output);
+            AL.setPower(-output);
+
         }
     }
 
@@ -471,7 +477,6 @@ public class MainSolo extends LinearOpMode {
                RT = 0.5 + (triggerValue * 0.5);
             }
             // Aplicar PIDF apenas se o controle manual não estiver ativo
-            controllerKIT.setPIDF(kitP, kitI, kitD, kitF);
             int currentPosition = KR.getCurrentPosition();
 
             double pid = controllerKIT.calculate(currentPosition, targetKIT);
@@ -482,16 +487,14 @@ public class MainSolo extends LinearOpMode {
             // Calcular potência final
             double output = pid + ff;
             output = Math.max(-1.0, Math.min(1.0, output));
-            double speed = 0.7;
 
             // Aplicar potência aos motores do braço
-            KR.setPower(output * speed);
+            KR.setPower(output * speedKIT);
 
         }
     }
     private void applyArm_PIDF() {
 
-            controllerArm.setPIDF(Arm_P, Arm_I, Arm_D, Arm_F );
 
             int currentPosition = Arm.getCurrentPosition(); // Leitura do encoder externo
             double pid = controllerArm.calculate(currentPosition, targetArm);
@@ -503,19 +506,16 @@ public class MainSolo extends LinearOpMode {
         output = Math.max(-1.0, Math.min(1.0, output));
 
 
-            Arm.setPower(output);
+            Arm.setPower(output * speedArm);
 
     }
     private void applyServoP_PIDF() {
-
-            controllerServoP.setPIDF(servoP_P, servoP_I, servoP_D, servoP_F );
 
             int currentPosition = EncoderServoP.getCurrentPosition(); // Leitura do encoder externo
             double currentAngle = currentPosition * ticks_in_degrees_Servos;
             double pid = controllerServoP.calculate(currentAngle, targetServoP); // Controle PID
 
-            double output = pid ;
-            double servoPosition = Math.max(0, Math.min(1, currentAngle / MAX_ANGLE + output));
+            double servoPosition = Math.max(0, Math.min(1, currentAngle / MAX_ANGLE + pid));
 
             servoPosition = Math.max(0, Math.min(1, servoPosition));
 
