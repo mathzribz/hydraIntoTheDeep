@@ -10,12 +10,12 @@ public class PIDFAng {
     private static PIDFController controller;
 
     // Constantes de PIDF e alvo inicial
-    public static double p = 0.01, i = 0.0, d = 0.001;
+    public static double p = 0.01, i = 0.0, d = 0;
     public static double f = 0.1; // Feedforward inicial
 
 
     // Fator de conversão para graus
-    public static final double ticks_in_degrees = 360.0 / 8192; // Para Through Bore Encoder da REV
+    public static final double ticks_in_degrees = 360.0 / 28; // Para Through Bore Encoder da REV
 
     public static double returnArmPIDF(double target, double posArm) {
         // Inicialização do controlador PIDF

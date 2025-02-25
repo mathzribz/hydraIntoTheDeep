@@ -9,7 +9,7 @@ public class PIDFPulso {
     private static PIDFController controller;
 
     // Constantes de PIDF e Feedforward
-    public static double p = 0.01, i = 0.0, d = 0.001, f = 0.1;
+    public static double p = 0.01, i = 0.0, d = 0., f = 0.1;
 
     // Conversão de ticks para graus
     public static final double ticks_in_degrees = 180.0 / 8192.0; // Para um encoder externo de 8192 ticks

@@ -1,3 +1,4 @@
+
 package org.firstinspires.ftc.teamcode.mechanisms;
 import androidx.annotation.NonNull;
 
@@ -54,13 +55,13 @@ public class subsystems {
 
             AR = hardwareMap.get(DcMotorEx.class, "AR");
             AR.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-            AR.setDirection(DcMotorSimple.Direction.FORWARD);
+            AR.setDirection(DcMotorSimple.Direction.REVERSE);
 
             AL = hardwareMap.get(DcMotorEx.class, "AL");
             AL.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
             AL.setDirection(DcMotorSimple.Direction.FORWARD);
 
-            Pivot = hardwareMap.get(DcMotorEx.class, "AR");
+
 
         }
 
@@ -70,8 +71,8 @@ public class subsystems {
 
             @Override
             public boolean run(@NonNull TelemetryPacket packet) {
-                AR.setPower(PIDFAng.returnArmPIDF(setPosition, Pivot.getCurrentPosition()));
-                AL.setPower(PIDFAng.returnArmPIDF(setPosition, Pivot.getCurrentPosition()));
+                AR.setPower(PIDFAng.returnArmPIDF(setPosition, AR.getCurrentPosition()));
+                AL.setPower(PIDFAng.returnArmPIDF(setPosition, AR.getCurrentPosition()));
                 return true;
             }
         }
@@ -110,10 +111,6 @@ public class subsystems {
             KR.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
             KR.setDirection(DcMotorSimple.Direction.FORWARD);
 
-
-
-            extend = hardwareMap.get(DcMotorEx.class, "KR");
-
         }
 
         public class updatePID implements Action {
@@ -122,7 +119,7 @@ public class subsystems {
 
             @Override
             public boolean run(@NonNull TelemetryPacket packet) {
-                KR.setPower(PIDFKit.returnKitPIDF(setPosition, extend.getCurrentPosition()));
+                KR.setPower(PIDFKit.returnKitPIDF(setPosition, KR.getCurrentPosition()));
                 return true;
             }
         }
@@ -152,43 +149,32 @@ public class subsystems {
 
     public class Antebraco {
         public int setPosition;
-
         public Antebraco(HardwareMap hardwareMap) {
             Arm = hardwareMap.get(DcMotorEx.class, "Arm");
-            Arm.setDirection(DcMotorEx.Direction.FORWARD);
-            encoderA = hardwareMap.get(DcMotorEx.class, "Arm");
-
+            Arm.setDirection(DcMotorEx.Direction.REVERSE);
         }
-
         // Ação para atualizar a posição do antebraço usando PIDF
         public class updatePID implements Action {
             @Override
             public boolean run(@NonNull TelemetryPacket packet) {
-                Arm.setPower(PIDFKit.returnKitPIDF(setPosition, encoderA.getCurrentPosition()));
-
+                Arm.setPower(PIDFKit.returnKitPIDF(setPosition, Arm.getCurrentPosition()));
                 return true;
             }
         }
-
-        public Action UpdatePID_Kit() {
+        public Action UpdatePID_Antebraço() {
             return new updatePID();
         }
-
         public class setPosition implements Action {
             int set;
-
             public setPosition(int position) {
                 set = position;
             }
-
             @Override
             public boolean run(@NonNull TelemetryPacket packet) {
                 setPosition = set;
                 return false;
             }
         }
-
-
     public Action SetPosition(int pos) {
         return new setPosition(pos);
     }
@@ -201,9 +187,9 @@ public class subsystems {
         public int targetPosition = 90; // Posição alvo inicial (90°)
 
         public Pulso(HardwareMap hardwareMap) {
-            servoP = hardwareMap.get(Servo.class, "servoA");
+            servoP = hardwareMap.get(Servo.class, "servoP");
             servoP.setDirection(Servo.Direction.FORWARD);
-            encoderP = hardwareMap.get(DcMotorEx.class, "encoderA");
+            encoderP = hardwareMap.get(DcMotorEx.class, "encoderP");
 
         }
 

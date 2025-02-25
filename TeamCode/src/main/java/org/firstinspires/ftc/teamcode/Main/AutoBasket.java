@@ -15,6 +15,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.teamcode.MecanumDrive;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
+import org.firstinspires.ftc.teamcode.mechanisms.subsystems;
 import org.firstinspires.ftc.vision.VisionPortal;
 import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
 import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
@@ -93,11 +94,13 @@ public final class AutoBasket extends LinearOpMode {
         Pose2d finalPose = new Pose2d(7, -35, Math.toRadians(90));
         Pose2d beginPose = new Pose2d(-21, -64, 0);
 
+
         waitForStart();
 
         // Executa a trajetória apenas se a AprilTag foi detectada
         Actions.runBlocking(
                 drive.actionBuilder(beginPose)
+
 
                         .setReversed(true)
                         .splineToLinearHeading(new Pose2d(-54, -52, Math.toRadians(50)), Math.toRadians(180.00))
