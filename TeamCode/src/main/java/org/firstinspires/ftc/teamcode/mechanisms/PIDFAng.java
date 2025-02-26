@@ -7,7 +7,7 @@ import com.arcrobotics.ftclib.controller.PIDFController;
 
 public class PIDFAng {
 
-    private static PIDFController controller;
+    public static PIDFController controller;
 
     // Constantes de PIDF e alvo inicial
     public static double p = 0.01, i = 0.0, d = 0;

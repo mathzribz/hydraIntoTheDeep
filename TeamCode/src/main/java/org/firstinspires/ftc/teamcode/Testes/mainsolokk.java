@@ -1,7 +1,6 @@
+package org.firstinspires.ftc.teamcode.Testes;
 
-
-package org.firstinspires.ftc.teamcode.TeleOp;
-
+import static java.lang.Thread.sleep;
 
 import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.config.Config;
@@ -9,21 +8,27 @@ import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
 import com.arcrobotics.ftclib.controller.PIDFController;
 import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
+import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
-import com.qualcomm.robotcore.hardware.Servo;
-import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
-import com.qualcomm.robotcore.hardware.TouchSensor;
-import com.qualcomm.robotcore.util.ElapsedTime;
+import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.IMU;
-
+import com.qualcomm.robotcore.hardware.Servo;
+import com.qualcomm.robotcore.hardware.TouchSensor;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 
-
 @Config
 @TeleOp
-public class MainSolo extends LinearOpMode {
+public class mainsolokk extends LinearOpMode {
+
+    private PIDFController controller;
+
+    // Constantes de PIDF e alvo inicial
+    public static double p = 0.01, i = 0.0, d = 0.000;
+    public static double f = 0.1; // Feedforward inicial
+    public static int target; // Alvo inicial em ticks
+
     private DcMotorEx RMF, RMB, LMF, LMB, KR, AR, AL, Arm;
     private Servo servoG, servoP;
     private DcMotorEx EncoderServoP;
@@ -57,48 +62,58 @@ public class MainSolo extends LinearOpMode {
     public static double servoP_P = 0.01, servoP_I = 0, servoP_D = 0, servoP_F = 0.01;
     public static int targetServoP;
 
-    private ElapsedTime timer = new ElapsedTime();
-
     @Override
-    public void runOpMode() {
-
-        FtcDashboard dashboard = FtcDashboard.getInstance();
-        telemetry = new MultipleTelemetry(telemetry, dashboard.getTelemetry());
-
+    public void runOpMode() throws InterruptedException {
         initt();
+
+
+        // Inicialização do controlador PIDF
+        controller = new PIDFController(p, i, d, f);
+
+        // Configuração do telemetry
+        telemetry = new MultipleTelemetry(telemetry, FtcDashboard.getInstance().getTelemetry());
+
+        // Inicialização dos motores
 
         waitForStart();
 
-        while (opModeIsActive()) {
-            initAng();
-            loc();
 
-            // Alternância entre os modos ao pressionar o touchpad
+        while (opModeIsActive()) {
+            loc();
             if (gamepad1.touchpad) {
                 isManualControl = !isManualControl;
-                sleep(300); // Pequeno delay para evitar múltiplos registros do toque
+                sleep(300);
             }
-
             if (isManualControl) {
                 AngControl();
                 KitControl();
                 ServosControl();
-                ArmControl();
                 applyArm_PIDF();
                 applyServoP_PIDF();
 
-                Collect = false;
             } else {
-                applyAngPIDF();
+                // Atualizar valores de PIDF em tempo real
+                controller.setPIDF(p, i, d, f);
 
+                // Obter a posição do encoder externo
+                int posPivot = AR.getCurrentPosition(); // Agora está correto!
 
+                // Calcular PID com base na posição do encoder
+                double pid = controller.calculate(posPivot, target);
+
+                // Calcular Feedforward
+                double ff = Math.cos(Math.toRadians(target * ticks_in_degrees)) * f;
+
+                // Calcular potência final
+                double output = pid + ff;
+                output = Math.max(-1.0, Math.min(1.0, output));
+
+                // Ajuste de direção para evitar que os motores se batam
+                AR.setPower(output);
+                AL.setPower(-output);
 
 
             }
-
-
-            // Atualizar telemetria
-
             telemetry.addData("Modo", isManualControl ? "Manual" : "Automático");
             telemetry.addData("targetANG", targetANG);
             telemetry.addData("power AR", AR.getPower());
@@ -109,11 +124,11 @@ public class MainSolo extends LinearOpMode {
             telemetry.addData("servoG", servoG.getPosition());
             telemetry.addData("servoP", servoP.getPosition());
             telemetry.addData(" Arm  ticks ", Arm.getCurrentPosition());
-            telemetry.addData(" target ANG ", targetANG);
             telemetry.update();
         }
-    }
 
+
+    }
     public void initt() {
         // Motores de movimento
         RMF = hardwareMap.get(DcMotorEx.class, "RMF"); // porta 0 expension
@@ -132,7 +147,7 @@ public class MainSolo extends LinearOpMode {
         // Pulso
         servoP = hardwareMap.get(Servo .class, "servoP"); // porta 1 expension
         // Through bore Encoder
-        EncoderServoP = hardwareMap.get(DcMotorEx.class, "LMB"); // porta  de control (encoder)
+        EncoderServoP = hardwareMap.get(DcMotorEx.class, "AL"); // porta  de control (encoder)
         // Sensor Magnético
         mag = hardwareMap.get(TouchSensor.class, "mag");
 
@@ -176,27 +191,6 @@ public class MainSolo extends LinearOpMode {
         controllerServoP.setPIDF(servoP_P, servoP_I, servoP_D, servoP_F );
 
     }
-
-    public void initAng() {
-        if (!homingDone) {
-            // Mover o braço lentamente para baixo até o sensor ativar
-            while (!mag.isPressed() && opModeIsActive()) {
-                AR.setPower(0.2);
-                AL.setPower(-0.2);
-            }
-            AR.setPower(0);
-            AL.setPower(0);
-
-            homingDone = true;
-        }
-        if (mag.isPressed() && homingDone) {
-            AR.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-
-        }
-    }
-
-
-
     public void loc() {
 
         // Recupera o IMU do hardwareMap
@@ -245,8 +239,7 @@ public class MainSolo extends LinearOpMode {
 
         telemetry.addData("Yaw", imu.getRobotYawPitchRollAngles());
 
-}
-
+    }
     public void AngControl() {
         double LT = gamepad1.left_trigger;
         double RT = gamepad1.right_trigger;
@@ -277,7 +270,6 @@ public class MainSolo extends LinearOpMode {
             AL.setPower(-armPower);
         }
     }
-
     public void KitControl() {
         double ticksMax = 3250; // Limite superior em ticks
         double ticksMin = -1300; // Limite inferior em ticks
@@ -288,7 +280,7 @@ public class MainSolo extends LinearOpMode {
 
         if (gamepad1.a) {
             if (currentTicksKL < ticksMax) {
-                  // Subindo
+                // Subindo
                 KR.setPower(kitPower);
             } else {
                 // Bloqueia no limite superior
@@ -296,52 +288,38 @@ public class MainSolo extends LinearOpMode {
             }
         } else if (gamepad1.b) {
             if (currentTicksKL > ticksMin) {
-              // Descendo
+                // Descendo
                 KR.setPower(-kitPower);
             } else {
-                 // Bloqueia no limite inferior
+                // Bloqueia no limite inferior
                 KR.setPower(0);
             }
         } else {
             // Parado quando não há entrada
             KR.setPower(0);
         }
-
     }
-
     public void ServosControl() {
 
         // Garra
 
         if (gamepad1.left_bumper ) {
-            servoG.setPosition(0.6);
+            servoG.setPosition(0.55);
         } else if (gamepad1.right_bumper) {
             servoG.setPosition(0);
         }
 
         // Pulso
         if (gamepad1.dpad_up) {
-          // targetServoP = 1;
-            servoP.setPosition(1);
+             targetServoP = 10;
         }
         else if (gamepad1.dpad_left) {
-            // targetServoP = 5;
-            servoP.setPosition(0.5);
+             targetServoP = 5;
+
         }
         else if (gamepad1.dpad_down){
-           // targetServoP = 0;
-            servoP.setPosition(0);
-        }
+             targetServoP = 0;
 
-    }
-
-    public void ArmControl() {
-
-        if (gamepad1.x) {
-            targetArm = -25;
-        }
-        else if (gamepad1.y) {
-            targetArm = -5;
         }
 
     }
@@ -443,31 +421,6 @@ public class MainSolo extends LinearOpMode {
         targetServoP = 0;
 
     }
-
-    private void applyAngPIDF() {
-
-        int posPivot = AR.getCurrentPosition(); // Agora está correto!
-
-        // Calcular PID com base na posição do encoder
-        double pid = controllerKIT.calculate(posPivot, targetANG);
-
-        // Calcular Feedforward
-        double ff = Math.cos(Math.toRadians(targetANG * ticks_in_degrees)) * angF;
-
-        // Calcular potência final
-        double output = pid + ff;
-
-
-        // Ajuste de direção para evitar que os motores se batam
-        AR.setPower(output);
-        AL.setPower(-output);
-
-
-    }
-
-
-
-
     private void applyKitPIDF() {
         if (!isManualControl) {
             double RT = 1;
@@ -478,7 +431,7 @@ public class MainSolo extends LinearOpMode {
 
                 targetKIT = minKIT + (int) (triggerValue * (maxKIT - minKIT));
 
-               RT = 0.5 + (triggerValue * 0.5);
+                RT = 0.5 + (triggerValue * 0.5);
             }
             // Aplicar PIDF apenas se o controle manual não estiver ativo
             int currentPosition = KR.getCurrentPosition();
@@ -498,8 +451,8 @@ public class MainSolo extends LinearOpMode {
         }
     }
     private void applyArm_PIDF() {
-            int currentPosition = Arm.getCurrentPosition(); // Leitura do encoder externo
-            double pid = controllerArm.calculate(currentPosition, targetArm);
+        int currentPosition = Arm.getCurrentPosition(); // Leitura do encoder externo
+        double pid = controllerArm.calculate(currentPosition, targetArm);
 
         double ff = Math.cos(Math.toRadians(targetArm * ticks_in_degrees)) * Arm_F;
 
@@ -508,23 +461,22 @@ public class MainSolo extends LinearOpMode {
         output = Math.max(-1.0, Math.min(1.0, output));
 
 
-            Arm.setPower(output * speedArm);
+        Arm.setPower(output * speedArm);
 
     }
     private void applyServoP_PIDF() {
 
-            int currentPosition = EncoderServoP.getCurrentPosition(); // Leitura do encoder externo
-            double currentAngle = currentPosition * ticks_in_degrees_Servos;
-            double pid = controllerServoP.calculate(currentAngle, targetServoP); // Controle PID
+        int currentPosition = EncoderServoP.getCurrentPosition(); // Leitura do encoder externo
+        double currentAngle = currentPosition * ticks_in_degrees_Servos;
+        double pid = controllerServoP.calculate(currentAngle, targetServoP); // Controle PID
 
-            double servoPosition = Math.max(0, Math.min(1, currentAngle / MAX_ANGLE + pid));
+        double servoPosition = Math.max(0, Math.min(1, currentAngle / MAX_ANGLE + pid));
 
-            servoPosition = Math.max(0, Math.min(1, servoPosition));
+        servoPosition = Math.max(0, Math.min(1, servoPosition));
 
-            // Aplica posição ao servo
-            servoP.setPosition(servoPosition);
+        // Aplica posição ao servo
+        servoP.setPosition(servoPosition);
 
 
-        }
     }
-
+}
