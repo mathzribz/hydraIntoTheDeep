@@ -21,22 +21,16 @@ public class subsystems {
 
     public class Claw {
         public Claw(HardwareMap hardwareMap) {
-
             servoG = hardwareMap.get(Servo.class, "servoG");
-
             servoG.setDirection(Servo.Direction.FORWARD);
-
         }
-
         public class ClawOpen implements Action {
             @Override
-
             public boolean run(@NonNull TelemetryPacket packet) {
                 servoG.setPosition(CLAW_OPEN);
                 return false;
             }
         }
-
         public class ClawClose implements Action {
             @Override
 

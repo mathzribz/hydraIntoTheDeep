@@ -188,7 +188,6 @@ public class MainSolo extends LinearOpMode {
         }
         if (mag.isPressed() && homingDone) {
             AR.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-            targetArm = -50;
 
         }
     }
