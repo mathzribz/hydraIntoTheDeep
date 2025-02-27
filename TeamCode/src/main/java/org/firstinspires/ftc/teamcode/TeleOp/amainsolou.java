@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode.TeleOp;
 
+import static java.lang.Thread.enumerate;
 import static java.lang.Thread.sleep;
 
 import com.acmerobotics.dashboard.FtcDashboard;
@@ -24,8 +25,8 @@ public class amainsolou extends LinearOpMode {
     private PIDFController controller;
 
     // Constantes de PIDF e alvo inicial
-    public static double p = 0.01, i = 0.0, d = 0.000;
-    public static double f = 0.1; // Feedforward inicial
+    public static double p = 0.01, i = 0.0, d = 0.0002;
+    public static double f = 0.15; // Feedforward inicial
     public static int target; // Alvo inicial em ticks
 
     private DcMotorEx RMF, RMB, LMF, LMB, AR, AL, KR, Arm;
@@ -78,7 +79,7 @@ public class amainsolou extends LinearOpMode {
 
 
         while (opModeIsActive()) {
-            initAng();
+
             loc();
             if (gamepad1.touchpad) {
                 isManualControl = !isManualControl;
@@ -90,8 +91,24 @@ public class amainsolou extends LinearOpMode {
                 ServosControl();
                 applyArm_PIDF();
                 applyServoP_PIDF();
+                if (gamepad1.left_trigger > 0.2){
+                    targetArm = -125;
+                }
+                else {
+                    targetArm = -70 ;
+                }
+
+
 
             } else {
+                AutoFunctions();
+                ServosControl();
+                applyArm_PIDF();
+                applyServoP_PIDF();
+                KitControl();
+                AngControl();
+
+
                 // Atualizar valores de PIDF em tempo real
                 controller.setPIDF(p, i, d, f);
 
@@ -115,14 +132,12 @@ public class amainsolou extends LinearOpMode {
 
             }
             telemetry.addData("Modo", isManualControl ? "Manual" : "Automático");
-            telemetry.addData("targetANG", targetANG);
-            telemetry.addData("power AR", AR.getPower());
-            telemetry.addData("power AL", AL.getPower());
+            telemetry.addData("targetANG", target);
+            telemetry.addData("targetServoP", targetServoP);
+            telemetry.addData("ticks", EncoderServoP.getCurrentPosition());
             telemetry.addData("Collect ", Collect);
             telemetry.addData("Ang ticks", AR.getCurrentPosition());
             telemetry.addData("Kit ticks", KR.getCurrentPosition());
-            telemetry.addData("servoG", servoG.getPosition());
-            telemetry.addData("servoP", servoP.getPosition());
             telemetry.addData(" Arm  ticks ", Arm.getCurrentPosition());
             telemetry.update();
         }
@@ -178,6 +193,8 @@ public class amainsolou extends LinearOpMode {
         AR.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         AL.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
+
+
 // Define valores
         controllerANG.setPIDF(angP, angI, angD, angF);
 
@@ -188,23 +205,7 @@ public class amainsolou extends LinearOpMode {
         controllerServoP.setPIDF(servoP_P, servoP_I, servoP_D, servoP_F );
 
     }
-    public void initAng() {
-        if (!homingDone) {
-            // Mover o braço lentamente para baixo até o sensor ativar
-            while (!mag.isPressed() && opModeIsActive()) {
-                AR.setPower(0.2);
-                AL.setPower(-0.2);
-            }
-            AR.setPower(0);
-            AL.setPower(0);
 
-            homingDone = true;
-        }
-        if (mag.isPressed() && homingDone) {
-            AR.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-
-        }
-    }
     public void loc() {
 
         // Recupera o IMU do hardwareMap
@@ -246,19 +247,19 @@ public class amainsolou extends LinearOpMode {
         double backRightPower = (rotY + rotX - rx) / denominator;
 
         // Aplicar potências
-        RMF.setPower(frontRightPower);
-        RMB.setPower(backRightPower);
-        LMF.setPower(frontLeftPower);
-        LMB.setPower(backLeftPower);
+        RMF.setPower(frontRightPower * speed);
+        RMB.setPower(backRightPower * speed) ;
+        LMF.setPower(frontLeftPower  * speed);
+        LMB.setPower(backLeftPower  * speed);
 
         telemetry.addData("Yaw", imu.getRobotYawPitchRollAngles());
 
     }
     public void AngControl() {
-        double LT = gamepad1.left_trigger;
-        double RT = gamepad1.right_trigger;
+        double LT = gamepad2.left_trigger;
+        double RT = gamepad2.right_trigger;
         double maxSpeed = 0.5;
-        double tickMax = -2200;
+        double tickMax = -4500;
         double currentTicksAng = AR.getCurrentPosition();
 
         // Inicializa a potência dos motores
@@ -285,50 +286,49 @@ public class amainsolou extends LinearOpMode {
         }
     }
     public void KitControl() {
-        double ticksMax = 3250; // Limite superior em ticks
-        double ticksMin = -1300; // Limite inferior em ticks
+        double ticksMax = 2250; // Limite superior em ticks
+        double ticksMin = -0; // Limite inferior em ticks
         double kitPower = 1;
 
         // Leitura da posição do encoder de KL
         int currentTicksKL = KR.getCurrentPosition();
 
-        if (gamepad1.a) {
-            if (currentTicksKL < ticksMax) {
-                // Subindo
-                KR.setPower(kitPower);
-            } else {
-                // Bloqueia no limite superior
-                KR.setPower(0);
-            }
-        } else if (gamepad1.b) {
-            if (currentTicksKL > ticksMin) {
+
+
+
+            if (gamepad2.right_bumper) {
+
+                    // Subindo
+                    KR.setPower(kitPower);
+
+                }
+             else if (gamepad2.left_bumper) {
+
                 // Descendo
                 KR.setPower(-kitPower);
-            } else {
-                // Bloqueia no limite inferior
+            }
+             else {
+                // Parado quando não há entrada
                 KR.setPower(0);
             }
-        } else {
-            // Parado quando não há entrada
-            KR.setPower(0);
-        }
+
     }
     public void ServosControl() {
 
         // Garra
 
         if (gamepad1.left_bumper ) {
-            servoG.setPosition(0.55);
+            servoG.setPosition(0.58);
         } else if (gamepad1.right_bumper) {
             servoG.setPosition(0);
         }
 
         // Pulso
         if (gamepad1.dpad_up) {
-             targetServoP = 10;
+             targetServoP = 20;
         }
         else if (gamepad1.dpad_left) {
-             targetServoP = 5;
+             targetServoP = 10;
 
         }
         else if (gamepad1.dpad_down){
@@ -342,22 +342,32 @@ public class amainsolou extends LinearOpMode {
         // Ang Max = -240 Ang Min = 0
         // Kit Max = 290 Kit min = 0
 
+
+
+        if (gamepad2.right_bumper) {
+            targetKIT = 40;
+        }
+
+        if (gamepad2.left_bumper) {
+            targetKIT = -155;
+        }
+
         // Coleta (Submersível)
-        if (gamepad1.a) {
+        if (gamepad2.a) {
             Collect = true;
 
             Collect_Submersible();
         }
 
         // Coleta (Specimen)
-        if (gamepad1.x) {
+        if (gamepad2.x) {
             Collect = false;
 
             Collect_Specimen();
         }
 
         // Depositar(Chamber)
-        if (gamepad1.y) {
+        if (gamepad2.y) {
             Collect = false;
 
             Deposit_Chamber();
@@ -365,7 +375,7 @@ public class amainsolou extends LinearOpMode {
         }
 
         // Depositar(Basket)
-        if (gamepad1.b) {
+        if (gamepad2.b) {
             Collect = false;
 
             Deposit_Basket();
@@ -373,12 +383,8 @@ public class amainsolou extends LinearOpMode {
 
         // Coleta
         if (Collect ) {
-            if (gamepad1.left_trigger > 0.2){
-                targetArm = 10;
-            }
-            else {
-                targetArm = 20;
-            }
+
+
         }
         telemetry.addData("target Ang", targetANG);
         telemetry.addData("target Kit", targetKIT);
@@ -388,38 +394,37 @@ public class amainsolou extends LinearOpMode {
     public void Collect_Submersible() {
 
 
-        targetANG = 0; speedANG = 0.5;
+        target = 0; speedANG = 0.5;
 
-        targetKIT = 0; speedKIT = 1.0;
+       // targetKIT = 0; speedKIT = 1.0;
 
-        targetArm = 0; speedArm = 1.0;
+        targetArm = -110; speedArm = 0.5;
 
-        targetServoP = 0;
+        targetServoP = -5;
 
     }
 
     public void Collect_Specimen() {
 
 
-        targetANG = -20; speedANG = 0.5;
+        target = 0; speedANG = 0.5;
 
-        targetKIT = 20; speedKIT = 1.0;
+        //targetKIT = -155; speedKIT = 1.0;
 
-        targetArm = 0; speedArm = 1.0;
+        targetArm = -70; speedArm = 0.5;
 
-        targetServoP = 0;
+        targetServoP = 10;
 
     }
 
     public void Deposit_Chamber() {
 
-        targetANG = 0; speedANG = 0.5;
+        target = -200; speedANG = 0.5;
 
-        targetKIT = 0; speedKIT = 1.0;
+      //  targetKIT = 0; speedKIT = 1.0;
 
-        targetArm = 0; speedArm = 1.0;
+        targetArm = 0; speedArm = 0.5;
 
-        targetServoP = 0;
 
     }
 
@@ -428,7 +433,7 @@ public class amainsolou extends LinearOpMode {
 
         targetANG = 0; speedANG = 0.6;
 
-        targetKIT = 0; speedKIT = 0.5;
+       // targetKIT = 0; speedKIT = 0.5;
 
         targetArm = 0; speedArm = 1.0;
 
