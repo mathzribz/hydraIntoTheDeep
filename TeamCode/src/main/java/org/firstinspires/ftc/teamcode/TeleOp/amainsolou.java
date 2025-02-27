@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.Testes;
+package org.firstinspires.ftc.teamcode.TeleOp;
 
 import static java.lang.Thread.sleep;
 
@@ -8,7 +8,6 @@ import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
 import com.arcrobotics.ftclib.controller.PIDFController;
 import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
-import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotor;
@@ -20,7 +19,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 
 @Config
 @TeleOp
-public class mainsolokk extends LinearOpMode {
+public class amainsolou extends LinearOpMode {
 
     private PIDFController controller;
 
@@ -29,7 +28,7 @@ public class mainsolokk extends LinearOpMode {
     public static double f = 0.1; // Feedforward inicial
     public static int target; // Alvo inicial em ticks
 
-    private DcMotorEx RMF, RMB, LMF, LMB, KR, AR, AL, Arm;
+    private DcMotorEx RMF, RMB, LMF, LMB, AR, AL, KR, Arm;
     private Servo servoG, servoP;
     private DcMotorEx EncoderServoP;
     private TouchSensor mag;
@@ -79,6 +78,7 @@ public class mainsolokk extends LinearOpMode {
 
 
         while (opModeIsActive()) {
+            initAng();
             loc();
             if (gamepad1.touchpad) {
                 isManualControl = !isManualControl;
@@ -178,9 +178,6 @@ public class mainsolokk extends LinearOpMode {
         AR.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         AL.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
-
-
-
 // Define valores
         controllerANG.setPIDF(angP, angI, angD, angF);
 
@@ -190,6 +187,23 @@ public class mainsolokk extends LinearOpMode {
 
         controllerServoP.setPIDF(servoP_P, servoP_I, servoP_D, servoP_F );
 
+    }
+    public void initAng() {
+        if (!homingDone) {
+            // Mover o braço lentamente para baixo até o sensor ativar
+            while (!mag.isPressed() && opModeIsActive()) {
+                AR.setPower(0.2);
+                AL.setPower(-0.2);
+            }
+            AR.setPower(0);
+            AL.setPower(0);
+
+            homingDone = true;
+        }
+        if (mag.isPressed() && homingDone) {
+            AR.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+
+        }
     }
     public void loc() {
 
