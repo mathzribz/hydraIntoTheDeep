@@ -20,18 +20,19 @@ import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 
 @Config
 @TeleOp
-public class amainsolou extends LinearOpMode {
+public class Amain extends LinearOpMode {
 
     private PIDFController controller;
 
-    // Constantes de PIDF e alvo inicial
+    // Variáveis PIDF para o braço
     public static double p = 0.01, i = 0.0, d = 0.0002;
     public static double f = 0.15; // Feedforward inicial
     public static int target; // Alvo inicial em ticks
+    public static double speedANG = 0.8;
 
     private DcMotorEx RMF, RMB, LMF, LMB, AR, AL, KR, Arm;
     private Servo servoG, servoP;
-    private DcMotorEx EncoderServoP;
+    private DcMotorEx EncoderServoP, EncoderANG;
     private TouchSensor mag;
     double speed = 0.8;
     private boolean isManualControl = true;
@@ -41,12 +42,6 @@ public class amainsolou extends LinearOpMode {
     final double ticks_in_degrees = 360.0 / 28;
     double MAX_ANGLE = 180;
     final double ticks_in_degrees_Servos = MAX_ANGLE / 8192;
-
-
-    // Variáveis PIDF para o braço
-    public static double angP = 0.01, angI = 0, angD = 0, angF = 0.1;
-    public static int targetANG = 0;
-    public static double speedANG = 0.8;
 
     // Variáveis PIDF para o Kit Liner
     public static double kitP = 0.01, kitI = 0, kitD = 0, kitF = 0.1;
@@ -81,32 +76,29 @@ public class amainsolou extends LinearOpMode {
         while (opModeIsActive()) {
 
             loc();
-            if (gamepad1.touchpad) {
-                isManualControl = !isManualControl;
-                sleep(300);
-            }
+
             if (isManualControl) {
-                AngControl();
                 KitControl();
                 ServosControl();
                 applyArm_PIDF();
                 applyServoP_PIDF();
-                if (gamepad1.left_trigger > 0.2){
-                    targetArm = -125;
-                }
-                else {
-                    targetArm = -70 ;
-                }
-
-
-
-            } else {
                 AutoFunctions();
-                ServosControl();
-                applyArm_PIDF();
-                applyServoP_PIDF();
-                KitControl();
-                AngControl();
+
+            }
+            if (Collect ) {
+                if (gamepad1.left_trigger > 0.2) {
+                    targetArm = -115;
+                } else {
+                    targetArm = -90;
+                }
+            }
+            if (gamepad2.y) {
+                target = -230;
+            }
+            if (gamepad2.x) {
+                target = 0;
+            }
+
 
 
                 // Atualizar valores de PIDF em tempo real
@@ -126,12 +118,11 @@ public class amainsolou extends LinearOpMode {
                 output = Math.max(-1.0, Math.min(1.0, output));
 
                 // Ajuste de direção para evitar que os motores se batam
-                AR.setPower(output);
-                AL.setPower(-output);
+                AR.setPower(output * speedANG);
+                AL.setPower(-output * speedANG);
 
-
-            }
             telemetry.addData("Modo", isManualControl ? "Manual" : "Automático");
+            telemetry.addData("Velocidade", speed);
             telemetry.addData("targetANG", target);
             telemetry.addData("targetServoP", targetServoP);
             telemetry.addData("ticks", EncoderServoP.getCurrentPosition());
@@ -163,10 +154,10 @@ public class amainsolou extends LinearOpMode {
         servoP = hardwareMap.get(Servo .class, "servoP"); // porta 1 expension
         // Through bore Encoder
         EncoderServoP = hardwareMap.get(DcMotorEx.class, "AL"); // porta  de control (encoder)
+        EncoderANG = hardwareMap.get(DcMotorEx.class, "AR"); // porta  de control (encoder)
         // Sensor Magnético
         mag = hardwareMap.get(TouchSensor.class, "mag");
 
-        controllerANG = new PIDFController(angP, angI, angD, angF);
         controllerKIT = new PIDFController(kitP, kitI, kitD, kitF);
         controllerArm = new PIDFController(Arm_P, Arm_I, Arm_D, Arm_F);
         controllerServoP = new PIDFController(servoP_P, servoP_I, servoP_D, servoP_F);
@@ -196,7 +187,6 @@ public class amainsolou extends LinearOpMode {
 
 
 // Define valores
-        controllerANG.setPIDF(angP, angI, angD, angF);
 
         controllerKIT.setPIDF(kitP, kitI, kitD, kitF);
 
@@ -252,6 +242,13 @@ public class amainsolou extends LinearOpMode {
         LMF.setPower(frontLeftPower  * speed);
         LMB.setPower(backLeftPower  * speed);
 
+        if (gamepad1.share){
+            speed = 0.85;
+        }
+        if (gamepad1.options){
+            speed = 0.65;
+        }
+
         telemetry.addData("Yaw", imu.getRobotYawPitchRollAngles());
 
     }
@@ -259,8 +256,8 @@ public class amainsolou extends LinearOpMode {
         double LT = gamepad2.left_trigger;
         double RT = gamepad2.right_trigger;
         double maxSpeed = 0.5;
-        double tickMax = -4500;
-        double currentTicksAng = AR.getCurrentPosition();
+        double tickMax = -3000;
+        double currentTicksAng = EncoderANG.getCurrentPosition();
 
         // Inicializa a potência dos motores
         double armPower ;
@@ -284,6 +281,13 @@ public class amainsolou extends LinearOpMode {
             AR.setPower(armPower);
             AL.setPower(-armPower);
         }
+        if(mag.isPressed() && RT > 0 ) {
+            AR.setPower(0);
+            AL.setPower(0);
+        }
+        if (mag.isPressed()) {
+            EncoderANG.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        }
     }
     public void KitControl() {
         double ticksMax = 2250; // Limite superior em ticks
@@ -292,25 +296,24 @@ public class amainsolou extends LinearOpMode {
 
         // Leitura da posição do encoder de KL
         int currentTicksKL = KR.getCurrentPosition();
-
-
-
-
+        if ( !Collect ) {
             if (gamepad2.right_bumper) {
 
-                    // Subindo
-                    KR.setPower(kitPower);
+                // Subindo
+                KR.setPower(kitPower);
 
-                }
-             else if (gamepad2.left_bumper) {
+            } else if (gamepad2.left_bumper) {
 
                 // Descendo
                 KR.setPower(-kitPower);
-            }
-             else {
+            } else {
                 // Parado quando não há entrada
                 KR.setPower(0);
             }
+        }
+        if (Collect){
+            KR.setPower(gamepad1.right_trigger);
+        }
 
     }
     public void ServosControl() {
@@ -318,7 +321,7 @@ public class amainsolou extends LinearOpMode {
         // Garra
 
         if (gamepad1.left_bumper ) {
-            servoG.setPosition(0.58);
+            servoG.setPosition(0.6);
         } else if (gamepad1.right_bumper) {
             servoG.setPosition(0);
         }
@@ -332,7 +335,7 @@ public class amainsolou extends LinearOpMode {
 
         }
         else if (gamepad1.dpad_down){
-             targetServoP = 0;
+             targetServoP = -5;
 
         }
 
@@ -343,31 +346,21 @@ public class amainsolou extends LinearOpMode {
         // Kit Max = 290 Kit min = 0
 
 
-
-        if (gamepad2.right_bumper) {
-            targetKIT = 40;
-        }
-
-        if (gamepad2.left_bumper) {
-            targetKIT = -155;
-        }
-
         // Coleta (Submersível)
-        if (gamepad2.a) {
+        if (gamepad1.a) {
             Collect = true;
-
             Collect_Submersible();
         }
 
         // Coleta (Specimen)
-        if (gamepad2.x) {
+        if (gamepad1.x) {
             Collect = false;
 
             Collect_Specimen();
         }
 
         // Depositar(Chamber)
-        if (gamepad2.y) {
+        if (gamepad1.y) {
             Collect = false;
 
             Deposit_Chamber();
@@ -375,30 +368,21 @@ public class amainsolou extends LinearOpMode {
         }
 
         // Depositar(Basket)
-        if (gamepad2.b) {
+        if (gamepad1.b) {
             Collect = false;
 
             Deposit_Basket();
         }
-
-        // Coleta
-        if (Collect ) {
-
-
-        }
-        telemetry.addData("target Ang", targetANG);
-        telemetry.addData("target Kit", targetKIT);
-
     }
 
     public void Collect_Submersible() {
 
 
-        target = 0; speedANG = 0.5;
+       // target = 0; speedANG = 0.5;
 
        // targetKIT = 0; speedKIT = 1.0;
 
-        targetArm = -110; speedArm = 0.5;
+        targetArm = -90; speedArm = 0.5;
 
         targetServoP = -5;
 
@@ -407,23 +391,24 @@ public class amainsolou extends LinearOpMode {
     public void Collect_Specimen() {
 
 
-        target = 0; speedANG = 0.5;
+       // target = 0; speedANG = 0.5;
 
         //targetKIT = -155; speedKIT = 1.0;
 
         targetArm = -70; speedArm = 0.5;
 
-        targetServoP = 10;
+        targetServoP = 9;
 
     }
 
     public void Deposit_Chamber() {
 
-        target = -200; speedANG = 0.5;
+       // target = -200; speedANG = 0.5;
 
       //  targetKIT = 0; speedKIT = 1.0;
 
-        targetArm = 0; speedArm = 0.5;
+        targetArm = -100; speedArm = 0.5;
+        targetServoP = 22;
 
 
     }
@@ -431,27 +416,17 @@ public class amainsolou extends LinearOpMode {
     public void Deposit_Basket() {
 
 
-        targetANG = 0; speedANG = 0.6;
+       // targetANG = 0; speedANG = 0.6;
 
        // targetKIT = 0; speedKIT = 0.5;
 
-        targetArm = 0; speedArm = 1.0;
+        targetArm = -110; speedArm = 0.5;
 
-        targetServoP = 0;
+        targetServoP = 10;
 
     }
     private void applyKitPIDF() {
         if (!isManualControl) {
-            double RT = 1;
-            if(Collect){
-                double triggerValue = gamepad1.right_trigger; // Valor de 0 a 1
-                int minKIT = 50;
-                int maxKIT = 200;
-
-                targetKIT = minKIT + (int) (triggerValue * (maxKIT - minKIT));
-
-                RT = 0.5 + (triggerValue * 0.5);
-            }
             // Aplicar PIDF apenas se o controle manual não estiver ativo
             int currentPosition = KR.getCurrentPosition();
 
