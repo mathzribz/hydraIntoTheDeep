@@ -74,6 +74,14 @@ public class Amain extends LinearOpMode {
 
 
         while (opModeIsActive()) {
+            if (mag.isPressed() && !homingDone) {
+           if (!homingDone) {
+               EncoderANG.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+               AR.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
+               AL.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
+           }
+            homingDone = true;
+        }
 
             loc();
 
@@ -87,13 +95,13 @@ public class Amain extends LinearOpMode {
             }
             if (Collect ) {
                 if (gamepad1.left_trigger > 0.2) {
-                    targetArm = -115;
+                    targetArm = -120;
                 } else {
                     targetArm = -90;
                 }
             }
             if (gamepad2.y) {
-                target = -230;
+                target = -180;
             }
             if (gamepad2.x) {
                 target = 0;
@@ -125,11 +133,11 @@ public class Amain extends LinearOpMode {
             telemetry.addData("Velocidade", speed);
             telemetry.addData("targetANG", target);
             telemetry.addData("targetServoP", targetServoP);
-            telemetry.addData("ticks", EncoderServoP.getCurrentPosition());
+            telemetry.addData("targetArm", targetArm);
             telemetry.addData("Collect ", Collect);
+            telemetry.addData("homingDone ", homingDone);
             telemetry.addData("Ang ticks", AR.getCurrentPosition());
             telemetry.addData("Kit ticks", KR.getCurrentPosition());
-            telemetry.addData(" Arm  ticks ", Arm.getCurrentPosition());
             telemetry.update();
         }
 
@@ -397,7 +405,7 @@ public class Amain extends LinearOpMode {
 
         targetArm = -70; speedArm = 0.5;
 
-        targetServoP = 9;
+        targetServoP = 3;
 
     }
 
@@ -407,9 +415,9 @@ public class Amain extends LinearOpMode {
 
       //  targetKIT = 0; speedKIT = 1.0;
 
-        targetArm = -100; speedArm = 0.5;
-        targetServoP = 22;
+        targetServoP = 35;
 
+        targetArm = -110; speedArm = 0.5;
 
     }
 
