@@ -1,7 +1,4 @@
-package org.firstinspires.ftc.teamcode.TeleOp;
-
-import static java.lang.Thread.enumerate;
-import static java.lang.Thread.sleep;
+package org.firstinspires.ftc.teamcode.Main;
 
 import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.config.Config;
@@ -21,32 +18,22 @@ import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 @Config
 @TeleOp
 public class Amain extends LinearOpMode {
-
-    private PIDFController controller;
-
-    // Variáveis PIDF para o braço
-    public static double p = 0.01, i = 0.0, d = 0.0002;
-    public static double f = 0.15; // Feedforward inicial
-    public static int target; // Alvo inicial em ticks
-    public static double speedANG = 0.8;
-
     private DcMotorEx RMF, RMB, LMF, LMB, AR, AL, KR, Arm;
     private Servo servoG, servoP;
     private DcMotorEx EncoderServoP, EncoderANG;
-    private TouchSensor mag;
+    private TouchSensor mag, toc;
     double speed = 0.8;
-    private boolean isManualControl = true;
-    boolean Collect = false;
-    boolean homingDone = false;
-    public PIDFController controllerANG, controllerKIT, controllerArm, controllerServoP;
-    final double ticks_in_degrees = 360.0 / 28;
-    double MAX_ANGLE = 180;
-    final double ticks_in_degrees_Servos = MAX_ANGLE / 8192;
+    double ticksMaxKit = 2250;
 
-    // Variáveis PIDF para o Kit Liner
-    public static double kitP = 0.01, kitI = 0, kitD = 0, kitF = 0.1;
-    public static int targetKIT ;
-    public static double speedKIT = 1;
+    // booleans
+    private final boolean isManualControl = true;
+    boolean Collect, DepositSpecimen, DepositBasket = false;
+    boolean homingDone = false;
+    boolean extendKit = false;
+
+    // PIDFS
+    public PIDFController controllerArm, controllerServoP;
+    final double ticks_in_degrees = 360.0 / 28;
 
     // Variáveis PIDF para o servo Antebraço
     public static double Arm_P = 0.01, Arm_I = 0, Arm_D = 0, Arm_F = 0.1;
@@ -56,103 +43,64 @@ public class Amain extends LinearOpMode {
     // Variáveis PIDF para o servo Pulso
     public static double servoP_P = 0.01, servoP_I = 0, servoP_D = 0, servoP_F = 0.01;
     public static int targetServoP;
+    double MAX_ANGLE = 180;
+    final double ticks_in_degrees_Servos = MAX_ANGLE / 8192;
 
     @Override
     public void runOpMode() throws InterruptedException {
-        initt();
 
-
-        // Inicialização do controlador PIDF
-        controller = new PIDFController(p, i, d, f);
-
-        // Configuração do telemetry
+        // Configuração do telemetry dashboard
         telemetry = new MultipleTelemetry(telemetry, FtcDashboard.getInstance().getTelemetry());
 
-        // Inicialização dos motores
+        // Inicialização
+        initt();
 
         waitForStart();
 
-
         while (opModeIsActive()) {
-            if (mag.isPressed() && !homingDone) {
-           if (!homingDone) {
-               EncoderANG.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-               AR.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
-               AL.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
-           }
-            homingDone = true;
-        }
 
+            initSystems();
             loc();
 
             if (isManualControl) {
+                // Controle dos sistemas (Manualmente) com limatadores
                 KitControl();
+                AngControl();
                 ServosControl();
+                // PIDFs
                 applyArm_PIDF();
                 applyServoP_PIDF();
+                // Pulso e Antebraço automáticos
                 AutoFunctions();
+                // Coletar e Depósitar
+                Collects();
+                Deposits();
 
             }
-            if (Collect ) {
-                if (gamepad1.left_trigger > 0.2) {
-                    targetArm = -120;
-                } else {
-                    targetArm = -90;
-                }
-            }
-            if (gamepad2.y) {
-                target = -180;
-            }
-            if (gamepad2.x) {
-                target = 0;
-            }
 
-
-
-                // Atualizar valores de PIDF em tempo real
-                controller.setPIDF(p, i, d, f);
-
-                // Obter a posição do encoder externo
-                int posPivot = AR.getCurrentPosition(); // Agora está correto!
-
-                // Calcular PID com base na posição do encoder
-                double pid = controller.calculate(posPivot, target);
-
-                // Calcular Feedforward
-                double ff = Math.cos(Math.toRadians(target * ticks_in_degrees)) * f;
-
-                // Calcular potência final
-                double output = pid + ff;
-                output = Math.max(-1.0, Math.min(1.0, output));
-
-                // Ajuste de direção para evitar que os motores se batam
-                AR.setPower(output * speedANG);
-                AL.setPower(-output * speedANG);
-
-            telemetry.addData("Modo", isManualControl ? "Manual" : "Automático");
-            telemetry.addData("Velocidade", speed);
-            telemetry.addData("targetANG", target);
-            telemetry.addData("targetServoP", targetServoP);
-            telemetry.addData("targetArm", targetArm);
-            telemetry.addData("Collect ", Collect);
-            telemetry.addData("homingDone ", homingDone);
             telemetry.addData("Ang ticks", AR.getCurrentPosition());
             telemetry.addData("Kit ticks", KR.getCurrentPosition());
+            telemetry.addData("targetServoP", targetServoP);
+            telemetry.addData("targetArm", targetArm);
+            telemetry.addData("Velocidade", speed);
+            telemetry.addData("Collect ", Collect);
+            telemetry.addData("Extend Kit ", extendKit);
+            telemetry.addData("homingDone ", homingDone);
+            telemetry.addData("Modo", isManualControl ? "Manual" : "Automático");
             telemetry.update();
         }
 
-
     }
     public void initt() {
-        // Motores de movimento
+        // Motores Locomoção
         RMF = hardwareMap.get(DcMotorEx.class, "RMF"); // porta 0 expension
         RMB = hardwareMap.get(DcMotorEx.class, "RMB"); // porta 1 expension
         LMF = hardwareMap.get(DcMotorEx.class, "LMF"); // porta 1 control
         LMB = hardwareMap.get(DcMotorEx.class, "LMB"); // porta 0 control
-        // Motores do Angulaçâo
+        // Motores Angulaçâo
         AR = hardwareMap.get(DcMotorEx.class, "AR"); // porta 2 control
         AL = hardwareMap.get(DcMotorEx.class, "AL"); // porta 3 control
-        // Motores do Kit
+        // Motores Kit
         KR = hardwareMap.get(DcMotorEx.class, "KR"); // porta 2 expension
         // Antebraço
         Arm = hardwareMap.get(DcMotorEx.class, "Arm"); // porta 3 expension
@@ -164,9 +112,11 @@ public class Amain extends LinearOpMode {
         EncoderServoP = hardwareMap.get(DcMotorEx.class, "AL"); // porta  de control (encoder)
         EncoderANG = hardwareMap.get(DcMotorEx.class, "AR"); // porta  de control (encoder)
         // Sensor Magnético
-        mag = hardwareMap.get(TouchSensor.class, "mag");
+        mag = hardwareMap.get(TouchSensor.class, "mag"); // porta 0 digial control
+        // Sensor de Toque
+        toc = hardwareMap.get(TouchSensor.class, "toc"); // porta 0 digial expension
 
-        controllerKIT = new PIDFController(kitP, kitI, kitD, kitF);
+        // Inicializar PIDFS
         controllerArm = new PIDFController(Arm_P, Arm_I, Arm_D, Arm_F);
         controllerServoP = new PIDFController(servoP_P, servoP_I, servoP_D, servoP_F);
 
@@ -192,16 +142,69 @@ public class Amain extends LinearOpMode {
         AR.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         AL.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
-
-
-// Define valores
-
-        controllerKIT.setPIDF(kitP, kitI, kitD, kitF);
-
+        // Define valores
         controllerArm.setPIDF(Arm_P, Arm_I, Arm_D, Arm_F );
 
         controllerServoP.setPIDF(servoP_P, servoP_I, servoP_D, servoP_F );
 
+    }
+
+    public void Collects() {
+        if (Collect ) {
+            if (gamepad1.left_trigger > 0.2) {
+                targetArm = -120;
+            } else {
+                targetArm = -90;
+            }
+
+            ticksMaxKit = 2250;
+            KR.setPower(gamepad1.right_trigger);
+            if (gamepad1.right_trigger > 0.1){
+                extendKit = true;
+            }
+        }
+    }
+    public void Deposits() {
+        if (DepositSpecimen){
+            ticksMaxKit = 1000; // ?
+            if (gamepad1.y) {
+                targetArm = -55;
+            } else {
+                targetArm = -110;
+            }
+        }
+
+        if (DepositBasket){
+            ticksMaxKit = 2250; // ?
+            if (gamepad1.b) {
+                targetArm = -95;
+            } else {
+                targetArm = -120;
+            }
+        }
+
+
+    }
+
+    public void initSystems() {
+        if (!homingDone) {
+            // Mover o braço lentamente para baixo até o sensor ativar
+            while (!mag.isPressed() && opModeIsActive()) {
+                AR.setPower(0.2);
+                AL.setPower(-0.2);
+            }
+            AR.setPower(0);
+            AL.setPower(0);
+
+            homingDone = true;
+        }
+        if (mag.isPressed() && homingDone) {
+            AR.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        }
+
+        if (toc.isPressed()) {
+            KR.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        }
     }
 
     public void loc() {
@@ -221,15 +224,11 @@ public class Amain extends LinearOpMode {
         double x = gamepad1.left_stick_x;
         double rx = gamepad1.right_stick_x;
 
-        // This button choice was made so that it is hard to hit on accident,
-        // it can be freely changed based on preference.
-        // The equivalent button is start on Xbox-style controllers.
         if (gamepad1.dpad_right) {
             imu.resetYaw();
         }
 
         double botHeading = imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.RADIANS);
-
 
         double rotX = x * Math.cos(-botHeading) - y * Math.sin(-botHeading);
         double rotY = x * Math.sin(-botHeading) + y * Math.cos(-botHeading);
@@ -250,20 +249,19 @@ public class Amain extends LinearOpMode {
         LMF.setPower(frontLeftPower  * speed);
         LMB.setPower(backLeftPower  * speed);
 
-        if (gamepad1.share){
-            speed = 0.85;
+        if (gamepad1.dpad_up){
+            speed = 0.825;
         }
-        if (gamepad1.options){
+        if (gamepad1.dpad_down){
             speed = 0.65;
         }
 
         telemetry.addData("Yaw", imu.getRobotYawPitchRollAngles());
-
     }
     public void AngControl() {
         double LT = gamepad2.left_trigger;
         double RT = gamepad2.right_trigger;
-        double maxSpeed = 0.5;
+        double maxSpeed = 0.75;
         double tickMax = -3000;
         double currentTicksAng = EncoderANG.getCurrentPosition();
 
@@ -279,7 +277,6 @@ public class Amain extends LinearOpMode {
                 armPower = (RT - LT) * maxSpeed;
             }
 
-
             // Permite apenas descer caso esteja no limite
             if (currentTicksAng <= tickMax && LT > 0) {
                 armPower = RT * maxSpeed; // Só permite descer
@@ -293,76 +290,67 @@ public class Amain extends LinearOpMode {
             AR.setPower(0);
             AL.setPower(0);
         }
-        if (mag.isPressed()) {
-            EncoderANG.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        }
     }
     public void KitControl() {
-        double ticksMax = 2250; // Limite superior em ticks
-        double ticksMin = -0; // Limite inferior em ticks
         double kitPower = 1;
 
         // Leitura da posição do encoder de KL
         int currentTicksKL = KR.getCurrentPosition();
         if ( !Collect ) {
             if (gamepad2.right_bumper) {
-
+                extendKit = true;
                 // Subindo
                 KR.setPower(kitPower);
 
             } else if (gamepad2.left_bumper) {
-
+                extendKit = true;
                 // Descendo
                 KR.setPower(-kitPower);
-            } else {
-                // Parado quando não há entrada
-                KR.setPower(0);
             }
         }
-        if (Collect){
-            KR.setPower(gamepad1.right_trigger);
-        }
-
+//        while (!toc.isPressed() &&  !extendKit) {
+//         KR.setPower(-0.3);
+//        }
     }
     public void ServosControl() {
 
         // Garra
-
         if (gamepad1.left_bumper ) {
             servoG.setPosition(0.6);
         } else if (gamepad1.right_bumper) {
             servoG.setPosition(0);
         }
 
-        // Pulso
-        if (gamepad1.dpad_up) {
-             targetServoP = 20;
-        }
-        else if (gamepad1.dpad_left) {
-             targetServoP = 10;
-
-        }
-        else if (gamepad1.dpad_down){
-             targetServoP = -5;
-
-        }
+       // Pulso
+//        if (gamepad1.dpad_up) {
+//             targetServoP = 20;
+//        }
+//        else if (gamepad1.dpad_left) {
+//             targetServoP = 10;
+//
+//        }
+//        else if (gamepad1.dpad_down){
+//             targetServoP = -5;
+//
+//        }
 
     }
 
     public void AutoFunctions() {
-        // Ang Max = -240 Ang Min = 0
-        // Kit Max = 290 Kit min = 0
-
-
         // Coleta (Submersível)
         if (gamepad1.a) {
             Collect = true;
+            DepositSpecimen = false;
+            DepositBasket = false;
+
             Collect_Submersible();
         }
 
         // Coleta (Specimen)
         if (gamepad1.x) {
             Collect = false;
+            DepositSpecimen = false;
+            DepositBasket = false;
 
             Collect_Specimen();
         }
@@ -370,14 +358,17 @@ public class Amain extends LinearOpMode {
         // Depositar(Chamber)
         if (gamepad1.y) {
             Collect = false;
+            DepositSpecimen = true;
+            DepositBasket = false;
 
             Deposit_Chamber();
-
         }
 
         // Depositar(Basket)
         if (gamepad1.b) {
             Collect = false;
+            DepositSpecimen = false;
+            DepositBasket = true;
 
             Deposit_Basket();
         }
@@ -385,10 +376,6 @@ public class Amain extends LinearOpMode {
 
     public void Collect_Submersible() {
 
-
-       // target = 0; speedANG = 0.5;
-
-       // targetKIT = 0; speedKIT = 1.0;
 
         targetArm = -90; speedArm = 0.5;
 
@@ -398,11 +385,6 @@ public class Amain extends LinearOpMode {
 
     public void Collect_Specimen() {
 
-
-       // target = 0; speedANG = 0.5;
-
-        //targetKIT = -155; speedKIT = 1.0;
-
         targetArm = -70; speedArm = 0.5;
 
         targetServoP = 3;
@@ -411,47 +393,20 @@ public class Amain extends LinearOpMode {
 
     public void Deposit_Chamber() {
 
-       // target = -200; speedANG = 0.5;
+        targetServoP = 30;
 
-      //  targetKIT = 0; speedKIT = 1.0;
-
-        targetServoP = 35;
-
-        targetArm = -110; speedArm = 0.5;
+        targetArm = -55; speedArm = 0.5;
 
     }
 
     public void Deposit_Basket() {
 
-
-       // targetANG = 0; speedANG = 0.6;
-
-       // targetKIT = 0; speedKIT = 0.5;
-
-        targetArm = -110; speedArm = 0.5;
+        targetArm = -95; speedArm = 0.5;
 
         targetServoP = 10;
 
     }
-    private void applyKitPIDF() {
-        if (!isManualControl) {
-            // Aplicar PIDF apenas se o controle manual não estiver ativo
-            int currentPosition = KR.getCurrentPosition();
 
-            double pid = controllerKIT.calculate(currentPosition, targetKIT);
-
-            // Calcular Feedforward
-            double ff = Math.cos(Math.toRadians(targetKIT * ticks_in_degrees)) * kitF;
-
-            // Calcular potência final
-            double output = pid + ff;
-            output = Math.max(-1.0, Math.min(1.0, output));
-
-            // Aplicar potência aos motores do braço
-            KR.setPower(output * speedKIT);
-
-        }
-    }
     private void applyArm_PIDF() {
         int currentPosition = Arm.getCurrentPosition(); // Leitura do encoder externo
         double pid = controllerArm.calculate(currentPosition, targetArm);
