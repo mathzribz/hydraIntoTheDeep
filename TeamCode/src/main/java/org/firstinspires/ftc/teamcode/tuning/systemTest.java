@@ -1,6 +1,8 @@
 package org.firstinspires.ftc.teamcode.tuning;
 
+import com.acmerobotics.roadrunner.ParallelAction;
 import com.acmerobotics.roadrunner.Pose2d;
+import com.acmerobotics.roadrunner.TrajectoryActionBuilder;
 import com.acmerobotics.roadrunner.Vector2d;
 import com.acmerobotics.roadrunner.ftc.Actions;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
@@ -24,20 +26,30 @@ public final class systemTest extends LinearOpMode {
             subsystems.Claw claw = new subsystems().new Claw(hardwareMap);
 
 
-
             waitForStart();
 
-            Actions.runBlocking(
-                    drive.actionBuilder(beginPose)
-                            .afterTime(1.5, kit.SetPosition(10))
+            TrajectoryActionBuilder move = drive.actionBuilder(beginPose)
+                    .afterTime(1.5, ang.SetPosition(50));
 //                            .afterTime(1.0, claw.new ClawOpen())
 //                            .afterTime(2, claw.new ClawClose())
 //                            .afterTime(2, ang.SetPosition(10))
 //                            .afterTime(2, arm.SetPosition(10))
 //                            .afterTime(2, pulso.SetPosition(10))
-                            .turn(2)
-                            .build());
-            ;
+
+
+            if (isStopRequested()) {
+                return;
+            }
+
+
+            Actions.runBlocking(
+                    new ParallelAction(
+                            move.build(),
+                            ang.UpdatePID_Ang()
+                    )
+            );
+
+
         }
     }
 }

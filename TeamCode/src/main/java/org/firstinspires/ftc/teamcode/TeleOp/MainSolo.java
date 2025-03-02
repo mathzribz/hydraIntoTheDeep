@@ -21,8 +21,8 @@ import com.qualcomm.robotcore.hardware.IMU;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 
+@TeleOp
 
-@Disabled
 public class MainSolo extends LinearOpMode {
     private DcMotorEx RMF, RMB, LMF, LMB, KR, AR, AL, Arm;
     private Servo servoG, servoP;

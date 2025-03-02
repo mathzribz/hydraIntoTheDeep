@@ -111,4 +111,5 @@ android {
 
 repositories {
 }
+ext.useFtcVision = true
 

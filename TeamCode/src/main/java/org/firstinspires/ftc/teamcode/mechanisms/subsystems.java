@@ -49,7 +49,7 @@ public class subsystems {
 
             AR = hardwareMap.get(DcMotorEx.class, "AR");
             AR.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-            AR.setDirection(DcMotorSimple.Direction.REVERSE);
+            AR.setDirection(DcMotorSimple.Direction.FORWARD);
 
             AL = hardwareMap.get(DcMotorEx.class, "AL");
             AL.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
@@ -183,7 +183,7 @@ public class subsystems {
         public Pulso(HardwareMap hardwareMap) {
             servoP = hardwareMap.get(Servo.class, "servoP");
             servoP.setDirection(Servo.Direction.FORWARD);
-            encoderP = hardwareMap.get(DcMotorEx.class, "encoderP");
+            encoderP = hardwareMap.get(DcMotorEx.class, "AL");
 
         }
 
