@@ -18,7 +18,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 
 @Config
 @TeleOp
-public class Amain extends LinearOpMode {
+public class AmainSolo extends LinearOpMode {
     private DcMotorEx RMF, RMB, LMF, LMB, AR, AL, KR, Arm;
     private Servo servoG, servoP;
     private DcMotorEx EncoderServoP, EncoderANG;
@@ -251,18 +251,11 @@ public class Amain extends LinearOpMode {
         LMF.setPower(frontLeftPower  * speed);
         LMB.setPower(backLeftPower  * speed);
 
-        if (gamepad1.dpad_up){
-            speed = 0.825;
-        }
-        if (gamepad1.dpad_down){
-            speed = 0.65;
-        }
-
         telemetry.addData("Yaw", imu.getRobotYawPitchRollAngles());
     }
     public void AngControl() {
-        double LT = gamepad2.left_trigger;
-        double RT = gamepad2.right_trigger;
+        double LT = gamepad1.left_trigger;
+        double RT = gamepad1.right_trigger;
         double maxSpeed = 0.75;
         double currentTicksAng = EncoderANG.getCurrentPosition();
 
@@ -298,12 +291,12 @@ public class Amain extends LinearOpMode {
         // Leitura da posição do encoder de KL
         int currentTicksKL = KR.getCurrentPosition();
         if ( !Collect ) {
-            if (gamepad2.right_bumper) {
+            if (gamepad1.dpad_up) {
                 extendKit = true;
                 // Subindo
                 KR.setPower(kitPower);
 
-            } else if (gamepad2.left_bumper) {
+            } else if (gamepad1.dpad_down) {
                 extendKit = true;
                 // Descendo
                 KR.setPower(-kitPower);
@@ -322,7 +315,7 @@ public class Amain extends LinearOpMode {
             servoG.setPosition(0);
         }
 
-       // Pulso
+        // Pulso
 //        if (gamepad1.dpad_up) {
 //             targetServoP = 20;
 //        }
