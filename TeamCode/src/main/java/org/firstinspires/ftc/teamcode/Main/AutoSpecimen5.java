@@ -5,7 +5,9 @@ import android.util.Size;
 
 import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
+import com.acmerobotics.roadrunner.ParallelAction;
 import com.acmerobotics.roadrunner.Pose2d;
+import com.acmerobotics.roadrunner.TrajectoryActionBuilder;
 import com.acmerobotics.roadrunner.Vector2d;
 import com.acmerobotics.roadrunner.ftc.Actions;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
@@ -15,6 +17,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.teamcode.MecanumDrive;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
+import org.firstinspires.ftc.teamcode.mechanisms.subsystems;
 import org.firstinspires.ftc.vision.VisionPortal;
 import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
 import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
@@ -108,12 +111,52 @@ public final class AutoSpecimen5 extends LinearOpMode {
 
         waitForStart();
 
-        // Executa a trajetória apenas se a AprilTag foi detectada
+        subsystems.Kit kit = new subsystems().new Kit(hardwareMap);
+        subsystems.Ang ang = new subsystems().new Ang(hardwareMap);
+        subsystems.Antebraco arm = new subsystems().new Antebraco(hardwareMap);
+        subsystems.Pulso pulso = new subsystems().new Pulso(hardwareMap);
+        subsystems.Claw claw = new subsystems().new Claw(hardwareMap);
+
         Actions.runBlocking(
-                drive.actionBuilder(beginPose)
-                        .setReversed(true)
-                        .splineTo(new Vector2d(8, -35), Math.toRadians(90))
-                        .waitSeconds(0.3)
+                new ParallelAction(
+                        claw.new ClawClose(),
+                        pulso.SetPosition(4)
+
+
+                )
+        );
+
+        waitForStart();
+
+        TrajectoryActionBuilder move = drive.actionBuilder(beginPose)
+                .afterTime(0, claw.new ClawClose())
+                .setReversed(true)
+                .splineTo(new Vector2d(8, -33), Math.toRadians(90))
+                .afterTime(1, arm.SetPosition(-105))
+                .afterTime(2, ang.SetPosition(378));
+//                            .afterTime(1.0, claw.new ClawOpen())
+//                            .afterTime(2, claw.new ClawClose())
+//                            .afterTime(2, ang.SetPosition(10))
+//                            .afterTime(2, arm.SetPosition(10))
+//
+
+
+        if (isStopRequested()) {
+            return;
+        }
+
+
+        Actions.runBlocking(
+                new ParallelAction(
+                        move.build(),
+                        ang.UpdatePID_Ang(),
+                        kit.UpdatePID_Kit(),
+                        arm.UpdatePID_Antebraço(),
+                        pulso.UpdatePID_Pulso()
+                )
+        );
+
+
 /*
                         .strafeToLinearHeading(new Vector2d(30, -35), 0.7)
                         .turn(-1.7)
@@ -152,8 +195,6 @@ public final class AutoSpecimen5 extends LinearOpMode {
 
 */
 
-
-                        .build());
 
     }
 }

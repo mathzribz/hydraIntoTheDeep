@@ -6,7 +6,7 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 
 @TeleOp
 public class testesMotor extends LinearOpMode {
-    private DcMotor AR, AL, KITL, KITR;
+    private DcMotor KR, AL, KITL, KITR;
 
 
     @Override
@@ -14,19 +14,19 @@ public class testesMotor extends LinearOpMode {
 
         waitForStart();
         while (opModeIsActive()) {
-            AR = hardwareMap.get(DcMotor.class, "Arm"); // porta 0
+            KR = hardwareMap.get(DcMotor.class, "KR"); // porta 0
             AL = hardwareMap.get(DcMotor.class, "AL"); // porta 1
 
 
 
-            AR.setDirection(DcMotor.Direction.FORWARD);
+            KR.setDirection(DcMotor.Direction.FORWARD);
 
 
-            AR.setPower(gamepad2.right_stick_y);
+            KR.setPower(gamepad2.right_stick_y);
 
 
 
-            telemetry.addData("AR", AR.getPower());
+            telemetry.addData("KR", KR.getPower());
 
             telemetry.update();
 

@@ -28,6 +28,7 @@ public class Amain extends LinearOpMode {
     double tickMaxAng = -3000;
 
     // booleans
+    boolean op = true;
     boolean Collect, DepositSpecimen, DepositBasket = false;
     boolean homingDone = false;
     boolean extendKit = false;
@@ -59,9 +60,9 @@ public class Amain extends LinearOpMode {
         waitForStart();
 
         while (opModeIsActive()) {
-
-            initSystems();
-            loc();
+            if (op) {
+                  initSystems();
+                loc();
 
 
                 // Controle dos sistemas (Manualmente) com limatadores
@@ -77,7 +78,7 @@ public class Amain extends LinearOpMode {
                 Collects();
                 Deposits();
 
-
+            }
 
             telemetry.addData("Ang ticks", AR.getCurrentPosition());
             telemetry.addData("Kit ticks", KR.getCurrentPosition());
@@ -201,10 +202,11 @@ public class Amain extends LinearOpMode {
             AR.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         }
 
-        if (toc.isPressed()) {
+        if (toc.isPressed() && homingDone) {
             KR.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         }
     }
+
 
     public void loc() {
 
@@ -303,9 +305,11 @@ public class Amain extends LinearOpMode {
                 KR.setPower(kitPower);
             }
         }
-       while (!toc.isPressed() &&  !extendKit) {
+     /*  while (!toc.isPressed() &&  !extendKit) {
         KR.setPower(-0.3);
        }
+       */
+
     }
     public void ServosControl() {
 
@@ -373,9 +377,10 @@ public class Amain extends LinearOpMode {
     public void Collect_Submersible() {
         speed = 0.825;
 
+
         targetArm = -90; speedArm = 0.5;
 
-        targetServoP = -5;
+        targetServoP = 5;
 
     }
 
@@ -383,17 +388,16 @@ public class Amain extends LinearOpMode {
 
         speed = 0.65;
 
-        targetArm = -70; speedArm = 0.5;
+        targetArm = -80; speedArm = 0.5;
 
-        targetServoP = 3;
+        targetServoP = 20;
 
     }
 
     public void Deposit_Chamber() {
-
         speed = 0.8;
 
-        targetServoP = 20;
+        targetServoP = 50;
 
         targetArm = -55; speedArm = 0.5;
 
@@ -408,7 +412,6 @@ public class Amain extends LinearOpMode {
         targetServoP = 10;
 
     }
-
     private void applyArm_PIDF() {
         int currentPosition = Arm.getCurrentPosition(); // Leitura do encoder externo
         double pid = controllerArm.calculate(currentPosition, targetArm);

@@ -16,8 +16,8 @@ public class subsystems {
     public DcMotorEx KR, AR, AL, Arm, Pivot, extend, encoderA, encoderP;
     public Servo servoG, servoP;
 
-    public static double CLAW_OPEN = 1.0;
-    public static double CLAW_CLOSE = 0;
+    public static double CLAW_OPEN = 0;
+    public static double CLAW_CLOSE = 0.6;
 
     public class Claw {
         public Claw(HardwareMap hardwareMap) {

@@ -27,7 +27,8 @@ public final class AutoSystemTest extends LinearOpMode {
 
             Actions.runBlocking(
                     new ParallelAction(
-                            claw.new ClawClose()
+                            claw.new ClawClose(),
+                            pulso.SetPosition(4)
 
 
                     )
@@ -36,12 +37,13 @@ public final class AutoSystemTest extends LinearOpMode {
             waitForStart();
 
             TrajectoryActionBuilder move = drive.actionBuilder(beginPose)
-                    .afterTime(1.5, ang.SetPosition(50));
+                   .afterTime(1, kit.SetPosition(50));
+                //   .afterTime(3, ang.SetPosition(378));
 //                            .afterTime(1.0, claw.new ClawOpen())
 //                            .afterTime(2, claw.new ClawClose())
 //                            .afterTime(2, ang.SetPosition(10))
 //                            .afterTime(2, arm.SetPosition(10))
-//                            .afterTime(2, pulso.SetPosition(10))
+//
 
 
             if (isStopRequested()) {
