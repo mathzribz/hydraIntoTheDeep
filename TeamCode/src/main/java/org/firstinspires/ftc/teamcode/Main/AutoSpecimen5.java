@@ -15,14 +15,13 @@ import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.teamcode.MecanumDrive;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
-import org.firstinspires.ftc.teamcode.mechanisms.subsystems;
 import org.firstinspires.ftc.vision.VisionPortal;
 import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
 import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
 
 import java.util.List;
 @TeleOp
-public final class AutoBasket extends LinearOpMode {
+public final class AutoSpecimen5 extends LinearOpMode {
     VisionPortal visionPortal;
     AprilTagProcessor tagProcessor;
     WebcamName controlHubCam;
@@ -34,7 +33,6 @@ public final class AutoBasket extends LinearOpMode {
     public void runOpMode() throws InterruptedException {
         FtcDashboard dashboard = FtcDashboard.getInstance();
         telemetry = new MultipleTelemetry(telemetry, dashboard.getTelemetry());
-        FtcDashboard.getInstance();
 
         controlHubCam = hardwareMap.get(WebcamName.class, "Webcam 1");
         // Inicializa o AprilTagProcessor
@@ -55,80 +53,107 @@ public final class AutoBasket extends LinearOpMode {
                 .setCameraResolution(new Size(640, 480))
                 .enableLiveView(true)
                 .setStreamFormat(VisionPortal.StreamFormat.MJPEG)
-
                 .build();
 
         telemetry.addLine("Aguardando detecção da AprilTag...");
         telemetry.update();
-/*
+
         // Espera até que uma AprilTag seja detectada
         while (!isStopRequested() && beginPose == null) {
             List<AprilTagDetection> detections = tagProcessor.getDetections();
             for (AprilTagDetection tag : detections) {
-                if (tag.id == 11) { // Verifica se a AprilTag detectada é a correta
-                    beginPose =(new Pose2d(-21, -64, 0)); // Define a posição inicial
-                    visionPortal.close();
+                if (tag.id == 11) {
+
+    // Offset da tag em relação à posição real na arena
+                    double tagOffsetX = 81.5;
+                    double tagOffsetY = -76.1;
+
+    // Converte as coordenadas da AprilTag para o sistema real da arena
+                    double myTagPoseX = -tag.ftcPose.y + tagOffsetX;
+                    double myTagPoseY = -tag.ftcPose.x + tagOffsetY;
+
+    // Aplica um fator de escala para compensar distorções de medição
+                    double scaleFactorX = 1.0;
+                    double scaleFactorY = 1.0;
+
+                    double x = myTagPoseX * scaleFactorX;
+                    double y = myTagPoseY * scaleFactorY;
+
+    // Define a posição inicial do robô
+                    beginPose = new Pose2d(x, y, 0);
+
                     break;
                 }
             }
+
             telemetry.addData("AprilTag Detectada?", beginPose != null);
+            telemetry.addData("beginPose", beginPose);
             telemetry.update();
         }
 
         // Desliga a câmera para economizar processamento
-
+        visionPortal.close();
 
         // Se nenhuma AprilTag foi detectada, não faz nada
         if (beginPose == null) {
-            telemetry.addLine("Nenhuma AprilTag detectada. Cancelando...");
+            telemetry.addLine("Nenhuma AprilTag detectada.");
             telemetry.update();
             return;
         }
-        */
 
-        telemetry.addLine("AprilTag detectada! Iniciando trajetória...");
-        telemetry.update();
 
         // Inicializa o drive com a posição corrigida
         MecanumDrive drive = new MecanumDrive(hardwareMap, beginPose);
-        Pose2d finalPose = new Pose2d(7, -35, Math.toRadians(90));
-        Pose2d beginPose = new Pose2d(-21, -64, 0);
-
+        Pose2d finalPose = new Pose2d(6, -35, Math.toRadians(90));
 
         waitForStart();
 
         // Executa a trajetória apenas se a AprilTag foi detectada
         Actions.runBlocking(
                 drive.actionBuilder(beginPose)
-
-
                         .setReversed(true)
-                        .splineToLinearHeading(new Pose2d(-54, -52, Math.toRadians(50)), Math.toRadians(180.00))
-                        .waitSeconds(1)
+                        .splineTo(new Vector2d(8, -35), Math.toRadians(90))
+                        .waitSeconds(0.3)
+/*
+                        .strafeToLinearHeading(new Vector2d(30, -35), 0.7)
+                        .turn(-1.7)
+                        .strafeToLinearHeading(new Vector2d(40, -35), 0.7)
+                        .turn(-1.7)
+                        .strafeToLinearHeading(new Vector2d(50, -35), 0.7)
+                        .turn(-2.25)
+
+                        .strafeTo(new Vector2d(50, -58))
 
 
-                        .strafeToLinearHeading(new Vector2d(-50, -40), Math.toRadians(90))
-                        .waitSeconds(1)
-                        .splineToLinearHeading(new Pose2d(-54, -52, Math.toRadians(50)), Math.toRadians(180.00))
-                        .waitSeconds(1)
+// Movimentos repetitivos (subindo e descendo)
 
+                        .waitSeconds(0.3)
+                        .strafeTo(new Vector2d(11, -35))
+                        .waitSeconds(0.3)
 
-                        .strafeToLinearHeading(new Vector2d(-60, -40), Math.toRadians(90))
-                        .waitSeconds(1)
-                        .splineToLinearHeading(new Pose2d(-54, -52, Math.toRadians(50)), Math.toRadians(180.00))
-                        .waitSeconds(1)
+                        .strafeTo(new Vector2d(38, -60))
+                        .waitSeconds(0.3)
+                        .strafeTo(new Vector2d(11, -35))
+                        .waitSeconds(0.3)
 
-                        .strafeToLinearHeading(new Vector2d(-58, -40), Math.toRadians(120))
-                        .waitSeconds(1)
-                        .splineToLinearHeading(new Pose2d(-54, -52, Math.toRadians(50)), Math.toRadians(180.00))
-                        .waitSeconds(1)
+                        .strafeTo(new Vector2d(38, -60))
+                        .waitSeconds(0.3)
+                        .strafeTo(new Vector2d(11, -35))
+                        .waitSeconds(0.3)
 
-                        .strafeToLinearHeading(new Vector2d(-27, -2), Math.toRadians(0))
-                        .waitSeconds(2)
+                        .strafeTo(new Vector2d(38, -60))
+                        .waitSeconds(0.3)
+                        .strafeTo(new Vector2d(11, -35))
+                        .waitSeconds(0.3)
 
+// Estacionamento final com spline otimizada
 
-                        //     .strafeToLinearHeading(new Vector2d(-54, -52), Math.toRadians(50))
+                        .strafeToConstantHeading(new Vector2d(42, -62) )
+
+*/
+
 
                         .build());
+
     }
 }

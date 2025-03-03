@@ -38,7 +38,7 @@ public class PIDFAng {
         double output = pid + ff;
         output = Math.max(-1.0, Math.min(1.0, output));
 
-        return output;
+        return output ;
 
     }
 }

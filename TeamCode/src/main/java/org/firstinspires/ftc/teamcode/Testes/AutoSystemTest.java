@@ -1,18 +1,18 @@
-package org.firstinspires.ftc.teamcode.tuning;
+package org.firstinspires.ftc.teamcode.Testes;
 
 import com.acmerobotics.roadrunner.ParallelAction;
 import com.acmerobotics.roadrunner.Pose2d;
 import com.acmerobotics.roadrunner.TrajectoryActionBuilder;
-import com.acmerobotics.roadrunner.Vector2d;
 import com.acmerobotics.roadrunner.ftc.Actions;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
 import org.firstinspires.ftc.teamcode.MecanumDrive;
-import org.firstinspires.ftc.teamcode.TankDrive;
 import org.firstinspires.ftc.teamcode.mechanisms.subsystems;
+import org.firstinspires.ftc.teamcode.tuning.TuningOpModes;
+
 @TeleOp
-public final class systemTest extends LinearOpMode {
+public final class AutoSystemTest extends LinearOpMode {
     @Override
     public void runOpMode() throws InterruptedException {
         Pose2d beginPose = new Pose2d(0, 0, 0);
@@ -25,6 +25,13 @@ public final class systemTest extends LinearOpMode {
             subsystems.Pulso pulso = new subsystems().new Pulso(hardwareMap);
             subsystems.Claw claw = new subsystems().new Claw(hardwareMap);
 
+            Actions.runBlocking(
+                    new ParallelAction(
+                            claw.new ClawClose()
+
+
+                    )
+            );
 
             waitForStart();
 
@@ -45,7 +52,10 @@ public final class systemTest extends LinearOpMode {
             Actions.runBlocking(
                     new ParallelAction(
                             move.build(),
-                            ang.UpdatePID_Ang()
+                            ang.UpdatePID_Ang(),
+                            kit.UpdatePID_Kit(),
+                            arm.UpdatePID_Antebraço(),
+                            pulso.UpdatePID_Pulso()
                     )
             );
 

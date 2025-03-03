@@ -28,7 +28,6 @@ public class Amain extends LinearOpMode {
     double tickMaxAng = -3000;
 
     // booleans
-    private final boolean isManualControl = true;
     boolean Collect, DepositSpecimen, DepositBasket = false;
     boolean homingDone = false;
     boolean extendKit = false;
@@ -64,7 +63,7 @@ public class Amain extends LinearOpMode {
             initSystems();
             loc();
 
-            if (isManualControl) {
+
                 // Controle dos sistemas (Manualmente) com limatadores
                 KitControl();
                 AngControl();
@@ -78,7 +77,7 @@ public class Amain extends LinearOpMode {
                 Collects();
                 Deposits();
 
-            }
+
 
             telemetry.addData("Ang ticks", AR.getCurrentPosition());
             telemetry.addData("Kit ticks", KR.getCurrentPosition());
@@ -88,7 +87,6 @@ public class Amain extends LinearOpMode {
             telemetry.addData("Collect ", Collect);
             telemetry.addData("Extend Kit ", extendKit);
             telemetry.addData("homingDone ", homingDone);
-            telemetry.addData("Modo", isManualControl ? "Manual" : "Automático");
             telemetry.update();
         }
 
@@ -175,7 +173,6 @@ public class Amain extends LinearOpMode {
                 targetArm = -110;
             }
         }
-
         if (DepositBasket){
             ticksMaxKit = 2250; // ?
             if (gamepad1.b) {
@@ -269,7 +266,7 @@ public class Amain extends LinearOpMode {
         // Inicializa a potência dos motores
         double armPower ;
 
-        if (isManualControl) {// Lógica de controle com fim de curso
+        // Lógica de controle com fim de curso
             if (currentTicksAng <= tickMaxAng && LT > 0) {
                 // Se o braço já atingiu o limite máximo, impede a subida
                 armPower = 0; // Não sobe
@@ -286,7 +283,7 @@ public class Amain extends LinearOpMode {
             // Aplica a potência calculada nos motores
             AR.setPower(armPower);
             AL.setPower(-armPower);
-        }
+
         if(mag.isPressed() && RT > 0 ) {
             AR.setPower(0);
             AL.setPower(0);
@@ -298,20 +295,17 @@ public class Amain extends LinearOpMode {
         // Leitura da posição do encoder de KL
         int currentTicksKL = KR.getCurrentPosition();
         if ( !Collect ) {
-            if (gamepad2.right_bumper) {
+            if (gamepad2.right_bumper ) {
                 extendKit = true;
+            }
+            if (gamepad2.right_bumper && currentTicksKL < ticksMaxKit) {
                 // Subindo
                 KR.setPower(kitPower);
-
-            } else if (gamepad2.left_bumper) {
-                extendKit = true;
-                // Descendo
-                KR.setPower(-kitPower);
             }
         }
-//        while (!toc.isPressed() &&  !extendKit) {
-//         KR.setPower(-0.3);
-//        }
+       while (!toc.isPressed() &&  !extendKit) {
+        KR.setPower(-0.3);
+       }
     }
     public void ServosControl() {
 
@@ -338,6 +332,7 @@ public class Amain extends LinearOpMode {
     }
 
     public void AutoFunctions() {
+
         // Coleta (Submersível)
         if (gamepad1.a) {
             Collect = true;
@@ -378,7 +373,6 @@ public class Amain extends LinearOpMode {
     public void Collect_Submersible() {
         speed = 0.825;
 
-
         targetArm = -90; speedArm = 0.5;
 
         targetServoP = -5;
@@ -396,19 +390,17 @@ public class Amain extends LinearOpMode {
     }
 
     public void Deposit_Chamber() {
-        double ticksMaxKit = 2250;
-        double tickMaxAng = -3000;
+
         speed = 0.8;
 
-        targetServoP = 30;
+        targetServoP = 20;
 
         targetArm = -55; speedArm = 0.5;
 
     }
 
     public void Deposit_Basket() {
-        double ticksMaxKit = 2250;
-        double tickMaxAng = -3000;
+
         speed = 0.65;
 
         targetArm = -95; speedArm = 0.5;
