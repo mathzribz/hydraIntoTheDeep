@@ -26,6 +26,7 @@ public class Amain extends LinearOpMode {
     double speed = 0.8;
     double ticksMaxKit = 2250;
     double tickMaxAng = -3000;
+    private static final double DEAD_ZONE = 0.1;
 
     // booleans
     boolean op = true;
@@ -154,22 +155,52 @@ public class Amain extends LinearOpMode {
 
     public void Homing() {
         if (!homingDone) {
-            // Mover o braço lentamente para baixo até o sensor ativar
+            long startTime = System.currentTimeMillis(); // Marca o tempo inicial
+
+            // Mover AR e AL para baixo até o sensor 'mag' ser acionado ou timeout (3s)
             while (!mag.isPressed() && opModeIsActive()) {
+                if (System.currentTimeMillis() - startTime > 3000) { // Timeout de 3s
+                    AR.setPower(0);
+                    AL.setPower(0);
+                    telemetry.addData("Erro", "Timeout no Homing de AR e AL");
+                    telemetry.update();
+                    break;
+                }
                 AR.setPower(0.2);
                 AL.setPower(-0.2);
             }
             AR.setPower(0);
             AL.setPower(0);
 
+            startTime = System.currentTimeMillis(); // Reinicia o tempo para KR
+
+            // Mover KR para baixo até o sensor 'toc' ser acionado ou timeout (3s)
+            while (!toc.isPressed() && opModeIsActive()) {
+                if (System.currentTimeMillis() - startTime > 3000) { // Timeout de 3s
+                    KR.setPower(0);
+                    telemetry.addData("Erro", "Timeout no Homing de KR");
+                    telemetry.update();
+                    break;
+                }
+                KR.setPower(-0.3);
+            }
+            KR.setPower(0);
+
+            // Marcar que o homing foi concluído
             homingDone = true;
         }
-        if (mag.isPressed() && homingDone) {
-            AR.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        }
 
-        if (toc.isPressed() && homingDone) {
-            KR.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        // Resetar encoders quando sensores forem pressionados
+        if (homingDone) {
+            if (mag.isPressed()) {
+                AR.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+                AR.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+            }
+
+            if (toc.isPressed()) {
+                KR.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+                KR.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+            }
         }
     }
 
@@ -182,9 +213,25 @@ public class Amain extends LinearOpMode {
             }
 
             ticksMaxKit = 2250;
-            KR.setPower(gamepad1.right_trigger);
-            while (gamepad1.right_trigger > 0.1){
+
+            if (gamepad1.right_trigger > 0.1 && KR.getCurrentPosition() < ticksMaxKit) {
                 extendKit = true;
+                KR.setPower(gamepad1.right_trigger);
+            }
+            else if (gamepad1.right_trigger < 0.1) {
+                extendKit = false;
+            }
+            else if (!extendKit && !toc.isPressed()) {
+                KR.setPower(-0.8);
+            }
+            else if (toc.isPressed()) {
+                KR.setPower(0);
+                KR.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+                KR.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+
+            }
+            else {
+                KR.setPower(0);
             }
 
         }
@@ -209,7 +256,9 @@ public class Amain extends LinearOpMode {
 
 
     }
-
+    private double applyDeadZone(double value) {
+        return (Math.abs(value) > DEAD_ZONE) ? value : 0.0;
+    }
 
     public void loc() {
 
@@ -223,29 +272,36 @@ public class Amain extends LinearOpMode {
 
         // Inicializa o IMU com os parâmetros definidos
         imu.initialize(parameters);
-
-        double y = -gamepad1.left_stick_y;
-        double x = gamepad1.left_stick_x;
-        double rx = gamepad1.right_stick_x;
-
         if (gamepad1.dpad_right) {
             imu.resetYaw();
         }
 
-        double botHeading = imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.RADIANS);
 
-        double rotX = x * Math.cos(-botHeading) - y * Math.sin(-botHeading);
-        double rotY = x * Math.sin(-botHeading) + y * Math.cos(-botHeading);
+        double rawX = gamepad1.left_stick_x;
+        double rawY = -gamepad1.left_stick_y; // Inverte Y pois no joystick o eixo positivo é para baixo
+        double rawTurn = gamepad1.right_stick_x;
+
+        // Aplica a zona morta
+        double x = applyDeadZone(rawX);
+        double y = applyDeadZone(rawY);
+        double turn = applyDeadZone(rawTurn);
+
+        // Captura o ângulo de rotação do robô
+        double heading = imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.RADIANS);
+
+        // Converte os comandos do joystick para coordenadas relativas ao campo
+        double fieldX = x * Math.cos(-heading) - y * Math.sin(-heading);
+        double fieldY = x * Math.sin(-heading) + y * Math.cos(-heading);
 
         // Compensação do strafe
-        rotX = rotX * 1.1; // testar
+        fieldX = fieldX * 1.1; // testar
 
-        double denominator = Math.max(Math.abs(rotY) + Math.abs(rotX) + Math.abs(rx), 1);
+        double denominator = Math.max(Math.abs(fieldY) + Math.abs(fieldX) + Math.abs(turn), 1);
 
-        double frontLeftPower = (rotY + rotX + rx) / denominator;
-        double backLeftPower = (rotY - rotX + rx) / denominator;
-        double frontRightPower = (rotY - rotX - rx) / denominator;
-        double backRightPower = (rotY + rotX - rx) / denominator;
+        double frontLeftPower = (fieldY + fieldX + turn) / denominator;
+        double backLeftPower = (fieldY - fieldX + turn) / denominator;
+        double frontRightPower = (fieldY - fieldX - turn) / denominator;
+        double backRightPower = (fieldY + fieldX - turn) / denominator;
 
         // Aplicar potências
         RMF.setPower(frontRightPower * speed);
@@ -293,34 +349,34 @@ public class Amain extends LinearOpMode {
             AR.setPower(0);
             AL.setPower(0);
             AR.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+            AR.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+            AL.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+
         }
     }
     public void KitControl() {
-        double kitPower = 1;
+        if (!Collect) {
+            double kitPower = 1;
+            int currentTicksKL = KR.getCurrentPosition();
 
-        // Leitura da posição do encoder de KL
-        int currentTicksKL = KR.getCurrentPosition();
+            // Subir com o bumper esquerdo e respeitar o limite superior
+            if (gamepad2.left_bumper && currentTicksKL < ticksMaxKit) {
+                KR.setPower(kitPower); // Subindo
+            }
+            // Descer com o bumper direito e respeitar o sensor de toque
+            else if (gamepad2.right_bumper && !toc.isPressed()) {
+                KR.setPower(-kitPower); // Descendo
+            }
+            // Parar o motor caso não esteja pressionando os botões ou atingiu limites
+            else {
+                KR.setPower(0);
+            }
 
-        // Se o joystick esquerdo for movido para cima, ativa o extendKit
-        if (gamepad2.left_stick_y < -0.01) {
-            extendKit = true;
-        } else {
-            extendKit = false;
-        }
-
-        // Se o joystick estiver acionado para cima e não atingiu o limite superior
-        if (extendKit && currentTicksKL < ticksMaxKit) {
-            KR.setPower(-gamepad2.left_stick_y * kitPower); // Subindo
-        }
-        // Se o joystick não estiver sendo acionado para cima e o sensor não estiver pressionado, desce automaticamente
-        else if (!toc.isPressed()) {
-            KR.setPower(-0.6); // Descendo lentamente
-        }
-        // Se o sensor de toque for acionado, para o motor e reseta o encoder
-        else {
-            KR.setPower(0);
-            KR.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-            KR.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+            // Se o sensor de toque for acionado, resetar o encoder
+            if (toc.isPressed()) {
+                KR.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+                KR.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+            }
         }
     }
 
