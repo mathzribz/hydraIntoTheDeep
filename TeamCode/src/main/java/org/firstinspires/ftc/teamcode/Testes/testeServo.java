@@ -27,7 +27,7 @@ public class testeServo extends LinearOpMode {
         while (opModeIsActive()) {
             initservoA();
             if (gamepad1.left_bumper) {
-                servoG.setPosition(0.46);
+                servoG.setPosition(0.6);
 
             }
             if (gamepad1.right_bumper) {
@@ -42,7 +42,7 @@ public class testeServo extends LinearOpMode {
 
             }
             if (gamepad1.b) {
-                servoP.setPosition(1);
+                servoP.setPosition(0.8);
 
             }
 

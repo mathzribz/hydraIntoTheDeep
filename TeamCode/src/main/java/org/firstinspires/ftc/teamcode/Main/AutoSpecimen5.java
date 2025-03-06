@@ -123,6 +123,7 @@ public final class AutoSpecimen5 extends LinearOpMode {
                         pulso.SetPosition(4)
 
 
+
                 )
         );
 
@@ -149,6 +150,7 @@ public final class AutoSpecimen5 extends LinearOpMode {
         Actions.runBlocking(
                 new ParallelAction(
                         move.build(),
+
                         ang.UpdatePID_Ang(),
                         kit.UpdatePID_Kit(),
                         arm.UpdatePID_Antebraço(),

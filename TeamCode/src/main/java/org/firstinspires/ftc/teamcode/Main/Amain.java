@@ -61,7 +61,7 @@ public class Amain extends LinearOpMode {
 
         while (opModeIsActive()) {
             if (op) {
-                  initSystems();
+                Homing();
                 loc();
 
 
@@ -88,6 +88,8 @@ public class Amain extends LinearOpMode {
             telemetry.addData("Collect ", Collect);
             telemetry.addData("Extend Kit ", extendKit);
             telemetry.addData("homingDone ", homingDone);
+            telemetry.addData("DepositSpecimen ", DepositSpecimen);
+            telemetry.addData("DepositBasket ", DepositBasket);
             telemetry.update();
         }
 
@@ -140,8 +142,8 @@ public class Amain extends LinearOpMode {
         LMF.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         LMB.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
-        AR.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        AL.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        AR.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        AL.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
         // Define valores
         controllerArm.setPIDF(Arm_P, Arm_I, Arm_D, Arm_F );
@@ -150,43 +152,7 @@ public class Amain extends LinearOpMode {
 
     }
 
-    public void Collects() {
-        if (Collect ) {
-            if (gamepad1.left_trigger > 0.2) {
-                targetArm = -120;
-            } else {
-                targetArm = -90;
-            }
-
-            ticksMaxKit = 2250;
-            KR.setPower(gamepad1.right_trigger);
-            if (gamepad1.right_trigger > 0.1){
-                extendKit = true;
-            }
-        }
-    }
-    public void Deposits() {
-        if (DepositSpecimen){
-            ticksMaxKit = 1000; // ?
-            if (gamepad1.y) {
-                targetArm = -55;
-            } else {
-                targetArm = -110;
-            }
-        }
-        if (DepositBasket){
-            ticksMaxKit = 2250; // ?
-            if (gamepad1.b) {
-                targetArm = -95;
-            } else {
-                targetArm = -120;
-            }
-        }
-
-
-    }
-
-    public void initSystems() {
+    public void Homing() {
         if (!homingDone) {
             // Mover o braço lentamente para baixo até o sensor ativar
             while (!mag.isPressed() && opModeIsActive()) {
@@ -205,6 +171,43 @@ public class Amain extends LinearOpMode {
         if (toc.isPressed() && homingDone) {
             KR.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         }
+    }
+
+    public void Collects() {
+        if (Collect ) {
+            if (gamepad1.left_trigger > 0.2) {
+                targetArm = -110;
+            } else {
+                targetArm = -90;
+            }
+
+            ticksMaxKit = 2250;
+            KR.setPower(gamepad1.right_trigger);
+            while (gamepad1.right_trigger > 0.1){
+                extendKit = true;
+            }
+
+        }
+    }
+    public void Deposits() {
+        if (DepositSpecimen){
+            ticksMaxKit = 3000; // ?
+            if (gamepad1.y) {
+                targetArm = -55;
+            } else {
+                targetArm = -110;
+            }
+        }
+        if (DepositBasket){
+            ticksMaxKit = 2250; // ?
+            if (gamepad1.b) {
+                targetArm = -95;
+            } else {
+                targetArm = -120;
+            }
+        }
+
+
     }
 
 
@@ -289,6 +292,7 @@ public class Amain extends LinearOpMode {
         if(mag.isPressed() && RT > 0 ) {
             AR.setPower(0);
             AL.setPower(0);
+            AR.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         }
     }
     public void KitControl() {
@@ -296,21 +300,33 @@ public class Amain extends LinearOpMode {
 
         // Leitura da posição do encoder de KL
         int currentTicksKL = KR.getCurrentPosition();
-        if ( !Collect ) {
-            if (gamepad2.right_bumper ) {
-                extendKit = true;
-            }
-            if (gamepad2.right_bumper && currentTicksKL < ticksMaxKit) {
-                // Subindo
-                KR.setPower(kitPower);
-            }
-        }
-     /*  while (!toc.isPressed() &&  !extendKit) {
-        KR.setPower(-0.3);
-       }
-       */
 
+        // Se o joystick esquerdo for movido para cima, ativa o extendKit
+        if (gamepad2.left_stick_y < -0.01) {
+            extendKit = true;
+        } else {
+            extendKit = false;
+        }
+
+        // Se o joystick estiver acionado para cima e não atingiu o limite superior
+        if (extendKit && currentTicksKL < ticksMaxKit) {
+            KR.setPower(-gamepad2.left_stick_y * kitPower); // Subindo
+        }
+        // Se o joystick não estiver sendo acionado para cima e o sensor não estiver pressionado, desce automaticamente
+        else if (!toc.isPressed()) {
+            KR.setPower(-0.6); // Descendo lentamente
+        }
+        // Se o sensor de toque for acionado, para o motor e reseta o encoder
+        else {
+            KR.setPower(0);
+            KR.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+            KR.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        }
     }
+
+
+
+
     public void ServosControl() {
 
         // Garra
@@ -320,18 +336,6 @@ public class Amain extends LinearOpMode {
             servoG.setPosition(0);
         }
 
-       // Pulso
-//        if (gamepad1.dpad_up) {
-//             targetServoP = 20;
-//        }
-//        else if (gamepad1.dpad_left) {
-//             targetServoP = 10;
-//
-//        }
-//        else if (gamepad1.dpad_down){
-//             targetServoP = -5;
-//
-//        }
 
     }
 
@@ -380,7 +384,7 @@ public class Amain extends LinearOpMode {
 
         targetArm = -90; speedArm = 0.5;
 
-        targetServoP = 5;
+        targetServoP = -10;
 
     }
 
@@ -397,7 +401,7 @@ public class Amain extends LinearOpMode {
     public void Deposit_Chamber() {
         speed = 0.8;
 
-        targetServoP = 50;
+        targetServoP = 42;
 
         targetArm = -55; speedArm = 0.5;
 
