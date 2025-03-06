@@ -7,6 +7,7 @@ import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
 import com.acmerobotics.roadrunner.ParallelAction;
 import com.acmerobotics.roadrunner.Pose2d;
+import com.acmerobotics.roadrunner.SequentialAction;
 import com.acmerobotics.roadrunner.TrajectoryActionBuilder;
 import com.acmerobotics.roadrunner.Vector2d;
 import com.acmerobotics.roadrunner.ftc.Actions;
@@ -76,11 +77,10 @@ public final class AutoSpecimen5 extends LinearOpMode {
                     double myTagPoseY = -tag.ftcPose.x + tagOffsetY;
 
     // Aplica um fator de escala para compensar distorções de medição
-                    double scaleFactorX = 1.0;
-                    double scaleFactorY = 1.0;
 
-                    double x = myTagPoseX * scaleFactorX;
-                    double y = myTagPoseY * scaleFactorY;
+
+                    double x = myTagPoseX  ;
+                    double y = myTagPoseY ;
 
     // Define a posição inicial do robô
                     beginPose = new Pose2d(x, y, 0);
@@ -95,7 +95,7 @@ public final class AutoSpecimen5 extends LinearOpMode {
         }
 
         // Desliga a câmera para economizar processamento
-        visionPortal.close();
+
 
         // Se nenhuma AprilTag foi detectada, não faz nada
         if (beginPose == null) {
@@ -117,30 +117,72 @@ public final class AutoSpecimen5 extends LinearOpMode {
         subsystems.Pulso pulso = new subsystems().new Pulso(hardwareMap);
         subsystems.Claw claw = new subsystems().new Claw(hardwareMap);
 
+        waitForStart();
+
+        TrajectoryActionBuilder move = drive.actionBuilder(beginPose)
+            //    .afterTime(0, claw.new ClawClose())
+                .setReversed(true)
+                .splineTo(new Vector2d(8, -43), Math.toRadians(90))
+              //  .afterTime(1, arm.SetPosition(-105))
+               // .afterTime(2, ang.SetPosition(378));
+//                            .afterTime(1.0, claw.new ClawOpen())
+//                            .afterTime(2, claw.new ClawClose())
+//                            .afterTime(2, ang.SetPosition(10))
+//                            .afterTime(2, arm.SetPosition(10))
+
+
+                .splineToConstantHeading(new Vector2d(33, -38), Math.toRadians(90))
+                .splineToConstantHeading(new Vector2d(43, -10), Math.toRadians(90))
+
+                .splineToConstantHeading(new Vector2d(50, -58), Math.toRadians(90))
+                .splineToConstantHeading(new Vector2d(46, -10), Math.toRadians(90))
+
+                .splineToConstantHeading(new Vector2d(62, -58), Math.toRadians(90))
+                .splineToConstantHeading(new Vector2d(46, -10), Math.toRadians(90))
+                .splineToConstantHeading(new Vector2d(60, -10), Math.toRadians(90))
+
+                .splineToConstantHeading(new Vector2d(62, -58), Math.toRadians(90))
+
+
+
+
+// Movimentos repetitivos (subindo e descendo)
+
+                .waitSeconds(0.3)
+                .strafeTo(new Vector2d(11, -35))
+                .waitSeconds(0.3)
+
+                .strafeTo(new Vector2d(38, -58))
+                .waitSeconds(0.3)
+                .strafeTo(new Vector2d(11, -35))
+                .waitSeconds(0.3)
+
+                .strafeTo(new Vector2d(38, -58))
+                .waitSeconds(0.3)
+                .strafeTo(new Vector2d(11, -35))
+                .waitSeconds(0.3)
+
+                .strafeTo(new Vector2d(38, -58))
+                .waitSeconds(0.3)
+                .strafeTo(new Vector2d(11, -35))
+                .waitSeconds(0.3)
+
+// Estacionamento final com spline otimizada
+
+                .strafeToConstantHeading(new Vector2d(42, -62) );
+
+//
+
         Actions.runBlocking(
-                new ParallelAction(
-                        claw.new ClawClose(),
-                        pulso.SetPosition(4)
+                new SequentialAction(
+                   //     claw.new ClawClose(),
+                  //      pulso.SetPosition(4),
+                         move.build()
 
 
 
                 )
         );
-
-        waitForStart();
-
-        TrajectoryActionBuilder move = drive.actionBuilder(beginPose)
-                .afterTime(0, claw.new ClawClose())
-                .setReversed(true)
-                .splineTo(new Vector2d(8, -33), Math.toRadians(90))
-                .afterTime(1, arm.SetPosition(-105))
-                .afterTime(2, ang.SetPosition(378));
-//                            .afterTime(1.0, claw.new ClawOpen())
-//                            .afterTime(2, claw.new ClawClose())
-//                            .afterTime(2, ang.SetPosition(10))
-//                            .afterTime(2, arm.SetPosition(10))
-//
-
 
         if (isStopRequested()) {
             return;
@@ -149,12 +191,12 @@ public final class AutoSpecimen5 extends LinearOpMode {
 
         Actions.runBlocking(
                 new ParallelAction(
-                        move.build(),
 
-                        ang.UpdatePID_Ang(),
-                        kit.UpdatePID_Kit(),
-                        arm.UpdatePID_Antebraço(),
-                        pulso.UpdatePID_Pulso()
+
+                  //      ang.UpdatePID_Ang(),
+                  //      kit.UpdatePID_Kit(),
+                  //      arm.UpdatePID_Antebraço(),
+                  //      pulso.UpdatePID_Pulso()
                 )
         );
 

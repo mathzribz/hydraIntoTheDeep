@@ -17,7 +17,48 @@ public class MeepMeepTesting {
 
         myBot.runAction(myBot.getDrive().actionBuilder(new Pose2d(15, -64, 180))
                 .setReversed(true)
-                .splineTo(new Vector2d(-30, -20), Math.toRadians(90))
+                .splineTo(new Vector2d(8, -43), Math.toRadians(90))
+
+                .splineToConstantHeading(new Vector2d(33, -35), Math.toRadians(90))
+                .splineToConstantHeading(new Vector2d(43, -10), Math.toRadians(90))
+
+                .splineToConstantHeading(new Vector2d(50, -58), Math.toRadians(90))
+                .splineToConstantHeading(new Vector2d(46, -10), Math.toRadians(90))
+
+                .splineToConstantHeading(new Vector2d(62, -58), Math.toRadians(90))
+                .splineToConstantHeading(new Vector2d(46, -10), Math.toRadians(90))
+                .splineToConstantHeading(new Vector2d(60, -10), Math.toRadians(90))
+
+                .splineToConstantHeading(new Vector2d(62, -58), Math.toRadians(90))
+
+
+
+
+// Movimentos repetitivos (subindo e descendo)
+
+                .waitSeconds(0.3)
+                .strafeTo(new Vector2d(11, -35))
+                .waitSeconds(0.3)
+
+                .strafeTo(new Vector2d(38, -58))
+                .waitSeconds(0.3)
+                .strafeTo(new Vector2d(11, -35))
+                .waitSeconds(0.3)
+
+                .strafeTo(new Vector2d(38, -58))
+                .waitSeconds(0.3)
+                .strafeTo(new Vector2d(11, -35))
+                .waitSeconds(0.3)
+
+                .strafeTo(new Vector2d(38, -58))
+                .waitSeconds(0.3)
+                .strafeTo(new Vector2d(11, -35))
+                .waitSeconds(0.3)
+
+// Estacionamento final com spline otimizada
+
+                .strafeToConstantHeading(new Vector2d(42, -62) )
+
 
 
                 .build());
