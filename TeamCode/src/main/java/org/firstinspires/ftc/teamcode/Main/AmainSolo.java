@@ -10,6 +10,7 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DigitalChannel;
 import com.qualcomm.robotcore.hardware.IMU;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.hardware.TouchSensor;
@@ -22,7 +23,8 @@ public class AmainSolo extends LinearOpMode {
     private DcMotorEx RMF, RMB, LMF, LMB, AR, AL, KR, Arm;
     private Servo servoG, servoP;
     private DcMotorEx EncoderServoP, EncoderANG;
-    private TouchSensor mag, toc;
+    private TouchSensor mag;
+    DigitalChannel toc;
     double speed = 0.8;
     double ticksMaxKit = 2250;
     double tickMaxAng = -3000;
@@ -116,7 +118,7 @@ public class AmainSolo extends LinearOpMode {
         // Sensor Magnético
         mag = hardwareMap.get(TouchSensor.class, "mag"); // porta 0 digial control
         // Sensor de Toque
-        toc = hardwareMap.get(TouchSensor.class, "toc"); // porta 0 digial expension
+        toc = hardwareMap.get(DigitalChannel.class, "toc"); // porta 0 digial expension
 
         // Inicializar PIDFS
         controllerArm = new PIDFController(Arm_P, Arm_I, Arm_D, Arm_F);
@@ -143,6 +145,8 @@ public class AmainSolo extends LinearOpMode {
 
         AR.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         AL.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+
+        toc.setMode(DigitalChannel.Mode.INPUT);
 
         // Define valores
         controllerArm.setPIDF(Arm_P, Arm_I, Arm_D, Arm_F );
@@ -204,7 +208,7 @@ public class AmainSolo extends LinearOpMode {
             AR.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         }
 
-        if (toc.isPressed()) {
+        if (!toc.getState()) {
             KR.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         }
     }

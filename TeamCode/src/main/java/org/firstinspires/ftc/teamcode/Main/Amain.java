@@ -10,6 +10,7 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DigitalChannel;
 import com.qualcomm.robotcore.hardware.IMU;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.hardware.TouchSensor;
@@ -22,7 +23,8 @@ public class Amain extends LinearOpMode {
     private DcMotorEx RMF, RMB, LMF, LMB, AR, AL, KR, Arm;
     private Servo servoG, servoP;
     private DcMotorEx EncoderServoP, EncoderANG;
-    private TouchSensor mag, toc;
+    private TouchSensor mag;
+    DigitalChannel toc;
     double speed = 0.8;
     double ticksMaxKit = 2250;
     double tickMaxAng = -4000;
@@ -89,7 +91,7 @@ public class Amain extends LinearOpMode {
             telemetry.addData("Collect ", Collect);
             telemetry.addData("Extend Kit ", extendKit);
             telemetry.addData("homingDone ", homingDone);
-            telemetry.addData("pressionado ", toc.isPressed());
+            telemetry.addData("pressionado ", toc.getState());
             telemetry.addData("DepositSpecimen ", DepositSpecimen);
             telemetry.addData("DepositBasket ", DepositBasket);
             telemetry.update();
@@ -119,7 +121,7 @@ public class Amain extends LinearOpMode {
         // Sensor Magnético
         mag = hardwareMap.get(TouchSensor.class, "mag"); // porta 0 digial control
         // Sensor de Toque
-        toc = hardwareMap.get(TouchSensor.class, "toc"); // porta 0 digial expension
+        toc = hardwareMap.get(DigitalChannel.class, "toc"); // porta 0 digial expension
 
         // Inicializar PIDFS
         controllerArm = new PIDFController(Arm_P, Arm_I, Arm_D, Arm_F);
@@ -175,7 +177,7 @@ public class Amain extends LinearOpMode {
             startTime = System.currentTimeMillis(); // Reinicia o tempo para KR
 
             // Mover KR para baixo até o sensor 'toc' ser acionado ou timeout (3s)
-            while (!toc.isPressed() && opModeIsActive()) {
+            while (toc.getState() && opModeIsActive()) {
                 if (System.currentTimeMillis() - startTime > 3000) { // Timeout de 3s
                     KR.setPower(0);
                     telemetry.addData("Erro", "Timeout no Homing de KR");
@@ -196,7 +198,7 @@ public class Amain extends LinearOpMode {
                 AR.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
             }
 
-            if (toc.isPressed()) {
+            if (!toc.getState()) {
                 KR.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
             }
         }
@@ -361,7 +363,7 @@ public class Amain extends LinearOpMode {
                 KR.setPower(kitPower); // Subindo
             }
             // Descer com o bumper direito e respeitar o sensor de toque
-            else if (gamepad2.left_bumper && !toc.isPressed()) {
+            else if (gamepad2.left_bumper && toc.getState()) {
                 KR.setPower(-kitPower); // Descendo
             } else if (gamepad2.left_bumper && currentTicksKL >= ticksMaxKit) {
                 KR.setPower(-kitPower);
@@ -372,7 +374,7 @@ public class Amain extends LinearOpMode {
             }
         }
             // Se o sensor de toque for acionado, resetar o encoder
-            if (toc.isPressed()) {
+            if (!toc.getState()) {
                 KR.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
             }
 
