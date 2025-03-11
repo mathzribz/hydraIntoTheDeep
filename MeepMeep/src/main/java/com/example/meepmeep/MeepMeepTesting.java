@@ -15,16 +15,23 @@ public class MeepMeepTesting {
                 .setConstraints(60, 60, Math.toRadians(180), Math.toRadians(180), 16.5)
                 .build();
 
-        myBot.runAction(myBot.getDrive().actionBuilder(new Pose2d(15, -64, 180))
+        myBot.runAction(myBot.getDrive().actionBuilder(new Pose2d(15, -64, -0))
                 .setReversed(true)
-                .splineTo(new Vector2d(8, -43), Math.toRadians(90))
-                .strafeTo(new Vector2d(33, -35))
-                .strafeTo(new Vector2d(45, -10))
+                .splineTo(new Vector2d(8, -47), Math.toRadians(90))
+                .strafeToConstantHeading(new Vector2d(8, -51))
+
+                .setReversed(true)
+                .splineToConstantHeading(new Vector2d(37, -30), Math.toRadians(90))
+                .setReversed(true)
+                .splineToConstantHeading(new Vector2d(37, -9), Math.toRadians(90))
+                .splineToConstantHeading(new Vector2d(45, -9), Math.toRadians(90))
+
+
                 .strafeTo(new Vector2d(45, -58)) // Mantém X = 45 e move apenas o Y
                 .splineToConstantHeading(new Vector2d(56, -10), Math.toRadians(-30))
-                .strafeTo(new Vector2d(54, -58)) // Mantém X = 45 e move apenas o Y
-                .splineToConstantHeading(new Vector2d(58, -10), Math.toRadians(-30))
-                .strafeTo(new Vector2d(62, -58)) // Mantém X = 45 e move apenas o
+                .strafeTo(new Vector2d(60, -58)) // Mantém X = 45 e move apenas o Y
+                .splineToConstantHeading(new Vector2d(65, -10), Math.toRadians(-30))
+                .strafeTo(new Vector2d(65, -58)) // Mantém X = 45 e move apenas o
 
 // Movimentos repetitivos (subindo e descendo)
 
@@ -49,6 +56,8 @@ public class MeepMeepTesting {
 
 // Estacionamento final com spline otimizada
                 .strafeToConstantHeading(new Vector2d(42, -62) )
+
+
 
                 .build());
 

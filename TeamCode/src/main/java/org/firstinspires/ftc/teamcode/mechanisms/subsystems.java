@@ -17,7 +17,9 @@ public class subsystems {
     public Servo servoG, servoP;
 
     public static double CLAW_OPEN = 0;
-    public static double CLAW_CLOSE = 0.6;
+    public static double CLAW_CLOSE = 1;
+    public static int ANG_CHAMBER = 400;
+    public static int ANG_REST = 0;
 
     public class Claw {
         public Claw(HardwareMap hardwareMap) {
@@ -56,7 +58,6 @@ public class subsystems {
             AL.setDirection(DcMotorSimple.Direction.FORWARD);
 
 
-
         }
 
         public class updatePID implements Action {
@@ -93,6 +94,13 @@ public class subsystems {
             return new setPosition(pos);
         }
 
+        public Action AngUp() {
+            return new setPosition(ANG_CHAMBER);
+        }
+
+        public Action AngDown() {
+            return new setPosition(ANG_REST);
+        }
     }
 
     // Kit
@@ -169,10 +177,17 @@ public class subsystems {
                 return false;
             }
         }
-    public Action SetPosition(int pos) {
-        return new setPosition(pos);
+        public Action SetPosition(int pos) {
+            return new setPosition(pos);
+        }
+        public Action ArmUp() {
+            return new setPosition(-100);
+        }
+
+        public Action ArmDown() {
+            return new setPosition(0);
+        }
     }
-}
 
 
 
@@ -223,8 +238,7 @@ public class subsystems {
 
         public Action SetPosition(int pos) {
             return new setPosition(pos);
-        }
 
 
-    }
 }
+}}
